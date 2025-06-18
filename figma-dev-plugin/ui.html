@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Figma Dev Code Exporter</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: var(--figma-color-bg);
+      color: var(--figma-color-text);
+      font-size: 12px;
+    }
+    
+    .header {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--figma-color-border);
+    }
+    
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0 0 4px 0;
+    }
+    
+    .subtitle {
+      color: var(--figma-color-text-secondary);
+      margin: 0;
+    }
+    
+    .section {
+      margin-bottom: 16px;
+    }
+    
+    .section-title {
+      font-weight: 600;
+      margin: 0 0 8px 0;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--figma-color-text-secondary);
+    }
+    
+    .button {
+      background: var(--figma-color-bg-brand);
+      color: var(--figma-color-text-onbrand);
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 8px;
+      transition: background-color 0.2s;
+    }
+    
+    .button:hover {
+      background: var(--figma-color-bg-brand-hover);
+    }
+    
+    .button:disabled {
+      background: var(--figma-color-bg-disabled);
+      color: var(--figma-color-text-disabled);
+      cursor: not-allowed;
+    }
+    
+    .button.secondary {
+      background: var(--figma-color-bg-secondary);
+      color: var(--figma-color-text);
+    }
+    
+    .button.secondary:hover {
+      background: var(--figma-color-bg-hover);
+    }
+    
+    .code-preview {
+      background: var(--figma-color-bg-secondary);
+      border: 1px solid var(--figma-color-border);
+      border-radius: 4px;
+      padding: 12px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 10px;
+      line-height: 1.4;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    
+    .status.success {
+      background: var(--figma-color-bg-success);
+      color: var(--figma-color-text-onsuccess);
+    }
+    
+    .status.error {
+      background: var(--figma-color-bg-danger);
+      color: var(--figma-color-text-ondanger);
+    }
+    
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid var(--figma-color-border);
+      margin-bottom: 12px;
+    }
+    
+    .tab {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    
+    .tab.active {
+      border-bottom-color: var(--figma-color-bg-brand);
+      color: var(--figma-color-bg-brand);
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .input-group {
+      margin-bottom: 12px;
+    }
+    
+    .label {
+      display: block;
+      font-size: 11px;
+      font-weight: 500;
+      margin-bottom: 4px;
+      color: var(--figma-color-text-secondary);
+    }
+    
+    .input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid var(--figma-color-border);
+      border-radius: 4px;
+      background: var(--figma-color-bg);
+      color: var(--figma-color-text);
+      font-size: 11px;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .checkbox {
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 class="title">Dev Code Exporter</h1>
+    <p class="subtitle">Extract CSS & React code from Figma designs</p>
+  </div>
+  
+  <div id="status" class="status"></div>
+  
+  <div class="section">
+    <h3 class="section-title">Extract Code</h3>
+    <button id="extract-btn" class="button">Extract from Selection</button>
+    <p style="font-size: 10px; color: var(--figma-color-text-secondary); margin: 4px 0 0 0;">
+      Select a frame or component to extract code
+    </p>
+  </div>
+  
+  <div class="section">
+    <h3 class="section-title">Code Output</h3>
+    <div class="tabs">
+      <div class="tab active" data-tab="css">All Layers CSS</div>
+      <div class="tab" data-tab="basic-css">Basic CSS</div>
+      <div class="tab" data-tab="react">React</div>
+      <div class="tab" data-tab="json">JSON</div>
+    </div>
+
+    <div id="css-content" class="tab-content active">
+      <div id="css-preview" class="code-preview">Select a node and click "Extract from Selection" to see comprehensive CSS code here.</div>
+    </div>
+
+    <div id="basic-css-content" class="tab-content">
+      <div id="basic-css-preview" class="code-preview">Basic CSS for the selected element will appear here.</div>
+    </div>
+
+    <div id="react-content" class="tab-content">
+      <div id="react-preview" class="code-preview">React component code will appear here.</div>
+    </div>
+
+    <div id="json-content" class="tab-content">
+      <div id="json-preview" class="code-preview">Raw JSON data will appear here.</div>
+    </div>
+  </div>
+  
+  <div class="section">
+    <h3 class="section-title">MCP Integration</h3>
+    <div class="input-group">
+      <label class="label" for="mcp-url">MCP Server URL</label>
+      <input type="text" id="mcp-url" class="input" value="http://localhost:3333" placeholder="http://localhost:3333">
+    </div>
+    
+    <div class="checkbox-group">
+      <input type="checkbox" id="auto-send" class="checkbox" checked>
+      <label for="auto-send" style="font-size: 11px;">Auto-send to MCP server</label>
+    </div>
+    
+    <button id="send-mcp-btn" class="button secondary" disabled>Send to MCP Server</button>
+  </div>
+  
+  <script>
+    let currentData = null;
+    
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        // Remove active class from all tabs and contents
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
+        // Add active class to clicked tab and corresponding content
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab + '-content').classList.add('active');
+      });
+    });
+    
+    // Extract button
+    document.getElementById('extract-btn').addEventListener('click', () => {
+      showStatus('Extracting code...', 'info');
+      parent.postMessage({ pluginMessage: { type: 'extract-dev-code' } }, '*');
+    });
+    
+    // Send to MCP button
+    document.getElementById('send-mcp-btn').addEventListener('click', () => {
+      if (currentData) {
+        const mcpUrl = document.getElementById('mcp-url').value;
+        showStatus('Sending to MCP server...', 'info');
+        parent.postMessage({ 
+          pluginMessage: { 
+            type: 'send-to-mcp', 
+            data: currentData,
+            url: mcpUrl
+          } 
+        }, '*');
+      }
+    });
+    
+    // Listen for messages from plugin
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      
+      if (msg.type === 'dev-data-extracted') {
+        currentData = msg.data;
+        displayCode(msg.data);
+        document.getElementById('send-mcp-btn').disabled = false;
+        showStatus('Code extracted successfully!', 'success');
+        
+        // Auto-send if enabled
+        if (document.getElementById('auto-send').checked) {
+          setTimeout(() => {
+            document.getElementById('send-mcp-btn').click();
+          }, 500);
+        }
+      }
+      
+      if (msg.type === 'error') {
+        showStatus(msg.message, 'error');
+      }
+      
+      if (msg.type === 'success') {
+        showStatus(msg.message, 'success');
+      }
+    };
+    
+    function displayCode(data) {
+      // Display comprehensive CSS (all layers)
+      document.getElementById('css-preview').textContent = data.allLayersCSS || 'No comprehensive CSS available';
+
+      // Display basic CSS
+      document.getElementById('basic-css-preview').textContent = `.${data.name.toLowerCase().replace(/\s+/g, '-')} {\n  ${data.css}\n}`;
+
+      // Display React
+      document.getElementById('react-preview').textContent = data.react;
+
+      // Display JSON
+      document.getElementById('json-preview').textContent = JSON.stringify(data, null, 2);
+    }
+    
+    function showStatus(message, type) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = `status ${type}`;
+      status.style.display = 'block';
+      
+      if (type === 'success' || type === 'error') {
+        setTimeout(() => {
+          status.style.display = 'none';
+        }, 3000);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "Figma Dev Code Exporter",
+  "id": "figma-dev-code-exporter",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "documentAccess": "dynamic-page",
+  "editorType": ["figma", "dev"],
+  "capabilities": ["inspect", "vscode"],
+  "networkAccess": {
+    "allowedDomains": [
+      "http://localhost:3333",
+      "https://localhost:3333"
+    ],
+    "reasoning": "This plugin needs to send extracted Figma design data to a local MCP server running on localhost for development purposes."
+  }
+}
