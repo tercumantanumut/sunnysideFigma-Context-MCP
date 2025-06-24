@@ -1,0 +1,49 @@
+SUNNYSIDE PROPRIETARY SOFTWARE LICENSE
+
+Copyright (c) 2025 Sunnyside Software (Umut TAN - tercumantanumut). All rights reserved.
+
+This software and associated documentation files (the "Software") are proprietary 
+to Sunnyside Software and contain confidential and proprietary information.
+
+GRANT OF RIGHTS:
+1. Research and Development: You may use, modify, and distribute the Software 
+   solely for research, educational, and development purposes.
+
+2. Attribution Required: Any use, modification, or distribution of this Software 
+   must include clear attribution to Sunnyside Software and disclosure of this 
+   proprietary license.
+
+3. Fork Disclosure: Any derivative works, forks, or substantial modifications 
+   must clearly disclose their relationship to this original Software and 
+   maintain this license notice.
+
+RESTRICTIONS:
+1. Commercial Use: Commercial use, sale, or licensing of the Software is 
+   prohibited without express written permission from Sunnyside Software.
+
+2. Proprietary Notice: You may not remove or modify any proprietary notices, 
+   labels, or marks on the Software.
+
+3. No Warranty: The Software is provided "AS IS" without warranty of any kind.
+
+ACKNOWLEDGMENT:
+This Software incorporates concepts and architectural patterns from the 
+Framelink Figma MCP project (MIT License), but represents a substantially 
+different implementation with enhanced features, precision control, and 
+proprietary workflows developed by Sunnyside Software. While inspired by 
+open-source foundations, this Software contains significant proprietary 
+innovations and should not be considered a mere fork.
+
+Original Framelink MCP project: https://github.com/GLips/Figma-Context-MCP
+Framelink website: https://www.framelink.ai
+
+LIMITATION OF LIABILITY:
+In no event shall Sunnyside Software be liable for any claim, damages, or 
+other liability, whether in an action of contract, tort, or otherwise, 
+arising from, out of, or in connection with the Software or the use or 
+other dealings in the Software.
+
+For commercial licensing inquiries, contact: Umut TAN (tercumantanumut@gmail.com)
+
+This license is effective as of the date of first publication and applies 
+retroactively to all prior versions and commits of this Software.

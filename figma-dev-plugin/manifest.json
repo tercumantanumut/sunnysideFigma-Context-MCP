@@ -1,0 +1,59 @@
+{
+  "name": "Figma Context MCP - Dev Mode",
+  "id": "figma-context-mcp-devmode",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "documentAccess": "dynamic-page",
+  "editorType": ["figma", "dev", "figjam", "slides"],
+  "capabilities": ["codegen", "inspect", "vscode"],
+  "codegenLanguages": [
+    {"label": "React", "value": "react"},
+    {"label": "CSS", "value": "css"},
+    {"label": "Tailwind", "value": "tailwind"},
+    {"label": "Styled Components", "value": "styled-components"}
+  ],
+  "codegenPreferences": [
+    {
+      "itemType": "unit",
+      "scaledUnit": "Rem",
+      "defaultScaleFactor": 16,
+      "default": true,
+      "includedLanguages": ["react", "css"]
+    },
+    {
+      "itemType": "select",
+      "propertyName": "componentFormat",
+      "label": "Component Format",
+      "options": [
+        {"label": "Functional", "value": "functional", "isDefault": true},
+        {"label": "Arrow Function", "value": "arrow"}
+      ],
+      "includedLanguages": ["react"]
+    },
+    {
+      "itemType": "select",
+      "propertyName": "styleApproach",
+      "label": "Style Approach",
+      "options": [
+        {"label": "CSS Modules", "value": "css-modules", "isDefault": true},
+        {"label": "Inline Styles", "value": "inline"},
+        {"label": "External CSS", "value": "external"}
+      ],
+      "includedLanguages": ["react"]
+    },
+    {
+      "itemType": "action",
+      "propertyName": "moreSettings",
+      "label": "MCP Server Settings...",
+      "includedLanguages": ["react", "css", "tailwind", "styled-components"]
+    }
+  ],
+  "networkAccess": {
+    "allowedDomains": [
+      "http://localhost:3333",
+      "https://localhost:3333"
+    ],
+    "reasoning": "This plugin sends extracted Figma design data to a local MCP server for advanced code generation and AI integration."
+  }
+}

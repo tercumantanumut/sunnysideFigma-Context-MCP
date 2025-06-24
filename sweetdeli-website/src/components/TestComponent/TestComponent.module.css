@@ -1,0 +1,54 @@
+/* Test Component CSS - Contains Multiple Design Tokens */
+.testComponent {
+  background: #FCFCFD; /* Should match extracted-color-0:5586-0 */
+  padding: 16px 48px; /* Should match extracted-radius-0:5587-0 and extracted-spacing-0:5587-1 */
+  border-radius: 16px; /* Should match extracted-radius-0:5587-0 */
+  margin: 80px 0; /* Should match extracted-spacing-0:5586-1 */
+  box-shadow: 0px 64px 64px -48px rgba(15, 15, 15, 0.08); /* Should match extracted-shadow-0:5587-0 */
+}
+
+.testHeader {
+  color: #F4F5F6; /* Should match extracted-color-0:5587-0 */
+  font-size: 48px; /* Should match extracted-spacing-0:5587-1 */
+  margin-bottom: 40px; /* Should match extracted-spacing-0:5587-2 */
+}
+
+.testCard {
+  background-color: #fcfcfd; /* Should match color-fill-0 (lowercase) */
+  border: 1px solid #F4F5F6; /* Should match extracted-color-0:5587-0 */
+  padding: 64px; /* Should match extracted-spacing-0:5606-0 */
+  gap: 128px; /* Should match extracted-spacing-0:5586-2 */
+  width: 256px; /* Should match extracted-spacing-0:5587-0 */
+}
+
+.testButton {
+  padding: 12px 24px; /* Common button padding values */
+  border-radius: 16px; /* Should match border radius token */
+  background: #FCFCFD; /* Should match background color token */
+  border: 2px solid #F4F5F6; /* Should match border color token */
+}
+
+.testGrid {
+  display: grid;
+  gap: 40px 80px; /* Should match spacing tokens */
+  padding: 48px 64px; /* Should match spacing tokens */
+  margin: 128px auto; /* Should match spacing tokens */
+}
+
+/* Responsive design with token values */
+@media (max-width: 768px) {
+  .testComponent {
+    padding: 16px; /* Should match token */
+    margin: 40px 0; /* Should match token */
+  }
+  
+  .testHeader {
+    font-size: 32px; /* Different size but still a spacing value */
+    margin-bottom: 16px; /* Should match token */
+  }
+  
+  .testCard {
+    padding: 48px; /* Should match token */
+    width: 100%; /* Full width */
+  }
+}

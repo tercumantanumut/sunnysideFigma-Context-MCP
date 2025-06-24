@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Figma Context MCP - Dev Mode</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--figma-color-bg);
+      color: var(--figma-color-text);
+      padding: 16px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .container {
+      max-width: 100%;
+    }
+
+    .header {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--figma-color-border);
+    }
+
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: var(--figma-color-text);
+    }
+
+    .subtitle {
+      font-size: 11px;
+      color: var(--figma-color-text-secondary);
+    }
+
+    .section {
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--figma-color-text);
+    }
+
+    .info-card {
+      background: var(--figma-color-bg-secondary);
+      border: 1px solid var(--figma-color-border);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .selection-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .node-type {
+      background: var(--figma-color-bg-brand);
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    .node-name {
+      font-weight: 500;
+      flex: 1;
+    }
+
+    .dimensions {
+      font-size: 11px;
+      color: var(--figma-color-text-secondary);
+    }
+
+    .button {
+      background: var(--figma-color-bg-brand);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 8px;
+      transition: background-color 0.2s;
+    }
+
+    .button:hover {
+      background: var(--figma-color-bg-brand-hover);
+    }
+
+    .button:disabled {
+      background: var(--figma-color-bg-disabled);
+      cursor: not-allowed;
+    }
+
+    .button.secondary {
+      background: var(--figma-color-bg-secondary);
+      color: var(--figma-color-text);
+      border: 1px solid var(--figma-color-border);
+    }
+
+    .button.secondary:hover {
+      background: var(--figma-color-bg-hover);
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      margin-bottom: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--figma-color-bg-success);
+    }
+
+    .status-dot.error {
+      background: var(--figma-color-bg-danger);
+    }
+
+    .status-dot.warning {
+      background: var(--figma-color-bg-warning);
+    }
+
+    .features-list {
+      list-style: none;
+      font-size: 11px;
+    }
+
+    .features-list li {
+      padding: 4px 0;
+      color: var(--figma-color-text-secondary);
+    }
+
+    .features-list li:before {
+      content: '✓';
+      color: var(--figma-color-text-success);
+      font-weight: bold;
+      margin-right: 8px;
+    }
+
+    .code-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--figma-color-border);
+      margin-bottom: 12px;
+      gap: 2px;
+    }
+
+    .tab-button {
+      background: transparent;
+      border: none;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--figma-color-text-secondary);
+      cursor: pointer;
+      border-radius: 4px 4px 0 0;
+      transition: all 0.2s;
+    }
+
+    .tab-button:hover {
+      background: var(--figma-color-bg-hover);
+      color: var(--figma-color-text);
+    }
+
+    .tab-button.active {
+      background: var(--figma-color-bg-secondary);
+      color: var(--figma-color-text);
+      border: 1px solid var(--figma-color-border);
+      border-bottom: 1px solid var(--figma-color-bg-secondary);
+      margin-bottom: -1px;
+    }
+
+    .code-container {
+      background: var(--figma-color-bg-secondary);
+      border: 1px solid var(--figma-color-border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--figma-color-bg);
+      border-bottom: 1px solid var(--figma-color-border);
+    }
+
+    .code-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--figma-color-text);
+      font-family: 'Monaco', 'Menlo', monospace;
+    }
+
+    .code-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .action-button {
+      background: var(--figma-color-bg-brand);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .action-button:hover {
+      background: var(--figma-color-bg-brand-hover);
+    }
+
+    .action-button.secondary {
+      background: var(--figma-color-bg-secondary);
+      color: var(--figma-color-text);
+      border: 1px solid var(--figma-color-border);
+    }
+
+    .action-button.secondary:hover {
+      background: var(--figma-color-bg-hover);
+    }
+
+    .code-content {
+      position: relative;
+    }
+
+    .code-preview {
+      padding: 16px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 11px;
+      max-height: 300px;
+      overflow-y: auto;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: var(--figma-color-bg-secondary);
+    }
+
+    /* Syntax highlighting */
+    .syntax-keyword { color: #c792ea; }
+    .syntax-string { color: #c3e88d; }
+    .syntax-comment { color: #546e7a; font-style: italic; }
+    .syntax-function { color: #82aaff; }
+    .syntax-type { color: #ffcb6b; }
+    .syntax-property { color: #f07178; }
+    .syntax-value { color: #c3e88d; }
+
+    /* Loading skeleton */
+    .loading-skeleton {
+      padding: 12px;
+    }
+
+    .skeleton-line {
+      height: 12px;
+      background: linear-gradient(90deg, var(--figma-color-bg) 25%, var(--figma-color-bg-hover) 50%, var(--figma-color-bg) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s infinite;
+      border-radius: 2px;
+      margin-bottom: 8px;
+    }
+
+    .skeleton-line.short {
+      width: 60%;
+    }
+
+    @keyframes skeleton-loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Assets Section */
+    .assets-container {
+      background: var(--figma-color-bg-secondary);
+      border: 1px solid var(--figma-color-border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .assets-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      background: var(--figma-color-bg);
+      border-bottom: 1px solid var(--figma-color-border);
+    }
+
+    .assets-info {
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+      color: var(--figma-color-text-secondary);
+    }
+
+    .assets-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .assets-filters {
+      display: flex;
+      padding: 8px;
+      gap: 4px;
+      background: var(--figma-color-bg);
+      border-bottom: 1px solid var(--figma-color-border);
+    }
+
+    .filter-button {
+      background: transparent;
+      border: 1px solid var(--figma-color-border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 10px;
+      color: var(--figma-color-text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-button:hover {
+      background: var(--figma-color-bg-hover);
+    }
+
+    .filter-button.active {
+      background: var(--figma-color-bg-brand);
+      color: white;
+      border-color: var(--figma-color-bg-brand);
+    }
+
+    .assets-grid {
+      padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .asset-item {
+      background: var(--figma-color-bg);
+      border: 1px solid var(--figma-color-border);
+      border-radius: 4px;
+      padding: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .asset-item:hover {
+      background: var(--figma-color-bg-hover);
+      border-color: var(--figma-color-bg-brand);
+    }
+
+    .asset-preview {
+      width: 100%;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 4px;
+      border-radius: 2px;
+      overflow: hidden;
+      background: var(--figma-color-bg-secondary);
+    }
+
+    .asset-preview img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .asset-preview .asset-icon {
+      font-size: 20px;
+      opacity: 0.5;
+    }
+
+    .asset-info {
+      font-size: 9px;
+      color: var(--figma-color-text-secondary);
+    }
+
+    .asset-format {
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .asset-details {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .asset-size {
+      opacity: 0.7;
+    }
+
+    .asset-download {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: var(--figma-color-bg-brand);
+      color: white;
+      border: none;
+      border-radius: 2px;
+      padding: 2px 4px;
+      font-size: 8px;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .asset-item:hover .asset-download {
+      opacity: 1;
+    }
+
+    .assets-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--figma-color-text-secondary);
+    }
+
+    .empty-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+      opacity: 0.5;
+    }
+
+    .empty-text {
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .empty-subtitle {
+      font-size: 10px;
+      opacity: 0.7;
+    }
+
+    .message {
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+
+    .message.success {
+      background: var(--figma-color-bg-success-secondary);
+      color: var(--figma-color-text-success);
+      border: 1px solid var(--figma-color-border-success);
+    }
+
+    .message.error {
+      background: var(--figma-color-bg-danger-secondary);
+      color: var(--figma-color-text-danger);
+      border: 1px solid var(--figma-color-border-danger);
+    }
+
+    .settings-section {
+      border-top: 1px solid var(--figma-color-border);
+      padding-top: 16px;
+      margin-top: 16px;
+    }
+
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--figma-color-border);
+    }
+
+    .setting-item:last-child {
+      border-bottom: none;
+    }
+
+    .setting-label {
+      font-size: 11px;
+      color: var(--figma-color-text);
+    }
+
+    .setting-value {
+      font-size: 10px;
+      color: var(--figma-color-text-secondary);
+      background: var(--figma-color-bg-secondary);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .link {
+      color: var(--figma-color-text-brand);
+      text-decoration: none;
+      font-size: 11px;
+    }
+
+    .link:hover {
+      text-decoration: underline;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-height: 500px) {
+      .code-preview {
+        max-height: 80px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">Figma Context MCP</div>
+      <div class="subtitle">Dev Mode Integration & Code Generation</div>
+    </div>
+
+    <div class="section">
+      <div id="status" class="status">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">Initializing...</span>
+      </div>
+    </div>
+
+    <div id="messages"></div>
+
+    <div class="section" id="selection-section">
+      <div class="section-title">📍 Current Selection</div>
+      <div class="info-card" id="selection-info">
+        <div class="selection-info">
+          <span class="node-type" id="node-type">-</span>
+          <span class="node-name" id="node-name">No selection</span>
+        </div>
+        <div class="dimensions" id="node-dimensions">Select an element to see details</div>
+      </div>
+      
+      <button class="button" id="extract-button" disabled>
+        🚀 Extract Dev Code
+      </button>
+      <button class="button secondary" id="preview-button" disabled>
+        👁️ Preview Code
+      </button>
+      <button class="button secondary" id="extract-assets-button" disabled>
+        🎨 Extract Assets
+      </button>
+    </div>
+
+    <div class="section" id="assets-section" class="hidden">
+      <div class="section-title">🎨 Assets</div>
+      
+      <div class="assets-container">
+        <div class="assets-header">
+          <div class="assets-info">
+            <span id="assets-count">0 assets</span>
+            <span id="assets-size">0 B</span>
+          </div>
+          <div class="assets-actions">
+            <button class="action-button secondary" id="download-all-button" title="Download all assets">
+              📥 Download All
+            </button>
+            <button class="action-button secondary" id="send-to-mcp-button" title="Send assets to MCP server">
+              🚀 Send to MCP
+            </button>
+          </div>
+        </div>
+        
+        <div class="assets-filters">
+          <button class="filter-button active" data-filter="all">All</button>
+          <button class="filter-button" data-filter="PNG">PNG</button>
+          <button class="filter-button" data-filter="SVG">SVG</button>
+        </div>
+        
+        <div class="assets-grid" id="assets-grid">
+          <div class="assets-empty" id="assets-empty">
+            <div class="empty-icon">🖼️</div>
+            <div class="empty-text">No assets available</div>
+            <div class="empty-subtitle">Select a component or frame to extract assets</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="code-section" class="hidden">
+      <div class="section-title">💻 Generated Code</div>
+      
+      <div class="code-tabs">
+        <button class="tab-button active" data-format="react">React</button>
+        <button class="tab-button" data-format="css">CSS</button>
+        <button class="tab-button" data-format="tailwind">Tailwind</button>
+        <button class="tab-button" data-format="styled">Styled</button>
+      </div>
+      
+      <div class="code-container">
+        <div class="code-header">
+          <span class="code-title" id="code-title">Component.tsx</span>
+          <div class="code-actions">
+            <button class="action-button" id="copy-button" title="Copy to clipboard">
+              📋 Copy
+            </button>
+            <button class="action-button secondary" id="copy-all-button" title="Copy all formats">
+              📄 Copy All
+            </button>
+          </div>
+        </div>
+        
+        <div class="code-content">
+          <div class="code-preview" id="code-preview">
+            <div class="loading-skeleton" id="loading-skeleton">
+              <div class="skeleton-line"></div>
+              <div class="skeleton-line"></div>
+              <div class="skeleton-line short"></div>
+              <div class="skeleton-line"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="section-title">⚙️ Settings & Status</div>
+      <div class="setting-item">
+        <span class="setting-label">MCP Server</span>
+        <span class="setting-value" id="mcp-status">Checking...</span>
+      </div>
+      <div class="setting-item">
+        <span class="setting-label">Plugin Mode</span>
+        <span class="setting-value" id="plugin-mode">Dev Mode</span>
+      </div>
+      <div class="setting-item">
+        <span class="setting-label">Native CSS API</span>
+        <span class="setting-value" id="css-api-status">Available</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📚 Usage</div>
+      <div style="font-size: 11px; color: var(--figma-color-text-secondary); line-height: 1.4;">
+        <p style="margin-bottom: 8px;">
+          <strong>In Dev Mode:</strong> Select any element to generate code directly in the Inspect panel. Use the language dropdown to switch between React, CSS, Tailwind, and Styled Components.
+        </p>
+        <p style="margin-bottom: 8px;">
+          <strong>Code Preferences:</strong> Use Figma's code preferences to customize unit scaling (px to rem), component format, and styling approach.
+        </p>
+        <p>
+          <strong>MCP Integration:</strong> All extracted data is sent to the MCP server for advanced AI workflows and code generation.
+        </p>
+      </div>
+    </div>
+
+    <div class="section" id="dev-mode-section">
+      <div class="section-title">🎨 Dev Mode Features</div>
+      <div class="info-card">
+        <ul class="features-list">
+          <li>Real-time code generation in Inspect panel</li>
+          <li>Native Figma CSS API integration</li>
+          <li>React, CSS, Tailwind, Styled Components</li>
+          <li>Design token extraction</li>
+          <li>MCP server integration for AI workflows</li>
+          <li>VS Code compatibility</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <a href="#" class="link" id="docs-link">📖 View Documentation</a>
+    </div>
+  </div>
+
+  <script>
+    // Plugin state
+    let currentSelection = null;
+    let mcpServerConnected = false;
+    let generatedCode = {
+      react: '',
+      css: '',
+      tailwind: '',
+      styled: ''
+    };
+    let currentFormat = 'react';
+    let currentAssets = [];
+    let currentAssetFilter = 'all';
+
+    // Initialize UI
+    document.addEventListener('DOMContentLoaded', () => {
+      updateStatus('ready', 'Ready for Dev Mode');
+      checkMCPServer();
+      
+      // Set up event listeners
+      document.getElementById('extract-button').addEventListener('click', extractDevCode);
+      document.getElementById('preview-button').addEventListener('click', previewCode);
+      document.getElementById('extract-assets-button').addEventListener('click', extractAssets);
+      document.getElementById('docs-link').addEventListener('click', openDocs);
+      document.getElementById('copy-button').addEventListener('click', copyCurrentCode);
+      document.getElementById('copy-all-button').addEventListener('click', copyAllCode);
+      
+      // Assets event listeners
+      document.getElementById('download-all-button').addEventListener('click', downloadAllAssets);
+      document.getElementById('send-to-mcp-button').addEventListener('click', sendAssetsToMCP);
+      
+      // Asset filter switching
+      document.querySelectorAll('.filter-button').forEach(button => {
+        button.addEventListener('click', () => switchAssetFilter(button.dataset.filter));
+      });
+      
+      // Tab switching
+      document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', () => switchTab(button.dataset.format));
+      });
+      
+      // Keyboard shortcuts
+      document.addEventListener('keydown', handleKeyboardShortcuts);
+    });
+
+    // Listen for messages from plugin
+    window.onmessage = (event) => {
+      const message = event.data.pluginMessage;
+      
+      switch (message.type) {
+        case 'selection-changed':
+          handleSelectionChange(message.data);
+          break;
+        case 'dev-data-extracted':
+          handleDevDataExtracted(message.data);
+          break;
+        case 'assets-extracting':
+          showMessage(message.message, 'info');
+          updateStatus('working', 'Extracting assets...');
+          break;
+        case 'assets-extracted':
+          handleAssetsExtracted(message.data);
+          break;
+        case 'success':
+          showMessage(message.message, 'success');
+          break;
+        case 'error':
+          showMessage(message.message, 'error');
+          break;
+      }
+    };
+
+    function updateStatus(type, text) {
+      const statusDot = document.getElementById('status-dot');
+      const statusText = document.getElementById('status-text');
+      
+      statusDot.className = 'status-dot';
+      if (type === 'error') statusDot.classList.add('error');
+      if (type === 'warning') statusDot.classList.add('warning');
+      
+      statusText.textContent = text;
+    }
+
+    function handleSelectionChange(nodeData) {
+      currentSelection = nodeData;
+      
+      const nodeType = document.getElementById('node-type');
+      const nodeName = document.getElementById('node-name');
+      const nodeDimensions = document.getElementById('node-dimensions');
+      const extractButton = document.getElementById('extract-button');
+      const previewButton = document.getElementById('preview-button');
+      const extractAssetsButton = document.getElementById('extract-assets-button');
+      
+      if (nodeData) {
+        nodeType.textContent = nodeData.type;
+        nodeName.textContent = nodeData.name;
+        nodeDimensions.textContent = `${(nodeData.layout && nodeData.layout.width) || 0} × ${(nodeData.layout && nodeData.layout.height) || 0}px`;
+        
+        extractButton.disabled = false;
+        previewButton.disabled = false;
+        
+        // Enable extract assets button only if node can export
+        const canExport = nodeData.exportData && nodeData.exportData.canExport;
+        extractAssetsButton.disabled = !canExport;
+        
+        updateStatus('ready', `Selected: ${nodeData.name}`);
+      } else {
+        nodeType.textContent = '-';
+        nodeName.textContent = 'No selection';
+        nodeDimensions.textContent = 'Select an element to see details';
+        
+        extractButton.disabled = true;
+        previewButton.disabled = true;
+        extractAssetsButton.disabled = true;
+        
+        // Clear assets display
+        updateAssetsDisplay(null);
+        
+        updateStatus('ready', 'Ready for Dev Mode');
+      }
+    }
+
+    function updateAssetsDisplay(exportData) {
+      const assetsSection = document.getElementById('assets-section');
+      
+      // Always hide assets section initially - only show after extraction
+      assetsSection.classList.add('hidden');
+      currentAssets = [];
+    }
+
+    function extractAssets() {
+      if (!currentSelection) {
+        showMessage('Please select an element first', 'error');
+        return;
+      }
+      
+      parent.postMessage({ 
+        pluginMessage: { type: 'extract-assets' } 
+      }, '*');
+    }
+
+    function handleAssetsExtracted(data) {
+      updateStatus('ready', 'Assets extracted successfully');
+      showMessage(`Extracted ${data.assets.length} assets`, 'success');
+      
+      // Show and populate assets section
+      const assetsSection = document.getElementById('assets-section');
+      const assetsCount = document.getElementById('assets-count');
+      const assetsSize = document.getElementById('assets-size');
+      
+      assetsSection.classList.remove('hidden');
+      currentAssets = data.assets;
+      
+      // Update summary
+      const totalSize = currentAssets.reduce((sum, asset) => sum + (asset.size || 0), 0);
+      assetsCount.textContent = `${currentAssets.length} asset${currentAssets.length !== 1 ? 's' : ''}`;
+      assetsSize.textContent = formatFileSize(totalSize);
+      
+      // Render assets grid
+      renderAssetsGrid();
+    }
+
+    function renderAssetsGrid() {
+      const assetsGrid = document.getElementById('assets-grid');
+      const assetsEmpty = document.getElementById('assets-empty');
+      
+      // Filter assets based on current filter
+      const filteredAssets = currentAssets.filter(asset => {
+        if (currentAssetFilter === 'all') return true;
+        return asset.format === currentAssetFilter;
+      });
+      
+      if (filteredAssets.length === 0) {
+        assetsEmpty.style.display = 'block';
+        assetsGrid.innerHTML = '';
+        assetsGrid.appendChild(assetsEmpty);
+        return;
+      }
+      
+      assetsEmpty.style.display = 'none';
+      assetsGrid.innerHTML = '';
+      
+      filteredAssets.forEach((asset, index) => {
+        const assetItem = createAssetItem(asset, index);
+        assetsGrid.appendChild(assetItem);
+      });
+    }
+
+    function createAssetItem(asset, index) {
+      const item = document.createElement('div');
+      item.className = 'asset-item';
+      
+      const formatLabel = asset.format === 'PNG' ? `${asset.format} ${asset.scale}x` : 
+                         asset.format === 'SVG' ? `${asset.format} ${asset.variant}` : asset.format;
+      
+      item.innerHTML = `
+        <div class="asset-preview">
+          ${asset.dataUrl ? 
+            `<img src="${asset.dataUrl}" alt="${asset.filename}" />` : 
+            `<div class="asset-icon">${asset.format === 'PNG' ? '🖼️' : '📐'}</div>`
+          }
+        </div>
+        <div class="asset-info">
+          <div class="asset-format">${formatLabel}</div>
+          <div class="asset-details">
+            <span class="asset-size">${formatFileSize(asset.size || 0)}</span>
+          </div>
+        </div>
+        <button class="asset-download" onclick="downloadAsset(${index})" title="Download">⬇</button>
+      `;
+      
+      item.addEventListener('click', () => previewAsset(asset));
+      
+      return item;
+    }
+
+    function switchAssetFilter(filter) {
+      currentAssetFilter = filter;
+      
+      // Update filter buttons
+      document.querySelectorAll('.filter-button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === filter);
+      });
+      
+      // Re-render grid
+      renderAssetsGrid();
+    }
+
+    function downloadAsset(index) {
+      const asset = currentAssets[index];
+      if (!asset || !asset.data) return;
+      
+      try {
+        const blob = new Blob([asset.data], { 
+          type: asset.format === 'PNG' ? 'image/png' : 'image/svg+xml' 
+        });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = asset.filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        URL.revokeObjectURL(url);
+        showMessage(`Downloaded ${asset.filename}`, 'success');
+      } catch (error) {
+        console.error('Download failed:', error);
+        showMessage('Download failed', 'error');
+      }
+    }
+
+    function downloadAllAssets() {
+      if (currentAssets.length === 0) {
+        showMessage('No assets to download', 'error');
+        return;
+      }
+      
+      currentAssets.forEach((asset, index) => {
+        setTimeout(() => downloadAsset(index), index * 100); // Stagger downloads
+      });
+      
+      showMessage(`Downloading ${currentAssets.length} assets...`, 'success');
+    }
+
+    function sendAssetsToMCP() {
+      if (!currentSelection || !currentAssets.length) {
+        showMessage('No assets to send to MCP', 'error');
+        return;
+      }
+      
+      // This will be handled by the existing MCP integration
+      // when extractDevCode is called - assets are already included
+      parent.postMessage({ 
+        pluginMessage: { type: 'extract-dev-code' } 
+      }, '*');
+      
+      showMessage('Sending assets to MCP server...', 'success');
+    }
+
+    function previewAsset(asset) {
+      // Could add a modal preview here in the future
+      console.log('Preview asset:', asset);
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    function extractDevCode() {
+      if (!currentSelection) {
+        showMessage('Please select an element first', 'error');
+        return;
+      }
+      
+      updateStatus('ready', 'Extracting code...');
+      parent.postMessage({ 
+        pluginMessage: { type: 'extract-dev-code' } 
+      }, '*');
+    }
+
+    function previewCode() {
+      if (!currentSelection) {
+        showMessage('Please select an element first', 'error');
+        return;
+      }
+      
+      const codeSection = document.getElementById('code-section');
+      codeSection.classList.remove('hidden');
+      
+      showLoadingState();
+      
+      // Generate code with a small delay to show loading
+      setTimeout(() => {
+        generateAllCodeFormats(currentSelection);
+        displayCode();
+      }, 300);
+    }
+
+    function generateAllCodeFormats(nodeData) {
+      const componentName = sanitizeComponentName(nodeData.name);
+      const css = nodeData.nativeCSS || nodeData.css || '';
+      
+      // Generate React component
+      generatedCode.react = generateReactComponent(componentName, css, nodeData);
+      
+      // Generate CSS
+      generatedCode.css = generateCleanCSS(componentName, css);
+      
+      // Generate Tailwind component
+      generatedCode.tailwind = generateTailwindComponent(componentName, css, nodeData);
+      
+      // Generate Styled Components
+      generatedCode.styled = generateStyledComponent(componentName, css, nodeData);
+    }
+
+    function generateReactComponent(componentName, css, nodeData) {
+      const layout = nodeData.layout || {};
+      const hasChildren = nodeData.children && nodeData.children.length > 0;
+      
+      return `import React from 'react';
+import './${componentName}.css';
+
+interface ${componentName}Props {
+  className?: string;
+  ${hasChildren ? 'children?: React.ReactNode;' : ''}
+}
+
+const ${componentName}: React.FC<${componentName}Props> = ({ 
+  className${hasChildren ? ', children' : ''} 
+}) => {
+  return (
+    <div className={\`${componentName.toLowerCase()} \${className || ''}\`}>
+      ${hasChildren ? '{children}' : ''}
+    </div>
+  );
+};
+
+export default ${componentName};`;
+    }
+
+    function generateCleanCSS(componentName, css) {
+      const className = componentName.toLowerCase();
+      const cleanCSS = css.replace(/^\s+|\s+$/gm, '').replace(/\n\s*\n/g, '\n');
+      
+      return `.${className} {
+  ${cleanCSS || '/* Add your styles here */'}
+}
+
+/* Component variations */
+.${className}--hover:hover {
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.${className}--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}`;
+    }
+
+    function generateTailwindComponent(componentName, css, nodeData) {
+      const tailwindClasses = convertCSSToTailwindClasses(css);
+      const layout = nodeData.layout || {};
+      const hasChildren = nodeData.children && nodeData.children.length > 0;
+      
+      return `import React from 'react';
+
+interface ${componentName}Props {
+  className?: string;
+  ${hasChildren ? 'children?: React.ReactNode;' : ''}
+}
+
+const ${componentName}: React.FC<${componentName}Props> = ({ 
+  className${hasChildren ? ', children' : ''} 
+}) => {
+  return (
+    <div className={\`${tailwindClasses} \${className || ''}\`}>
+      ${hasChildren ? '{children}' : ''}
+    </div>
+  );
+};
+
+export default ${componentName};`;
+    }
+
+    function generateStyledComponent(componentName, css, nodeData) {
+      const cleanCSS = css.replace(/^\s+|\s+$/gm, '').replace(/\n\s*\n/g, '\n');
+      
+      return `import React from 'react';
+import styled from 'styled-components';
+
+const Styled${componentName} = styled.div\`
+  ${cleanCSS || '/* Add your styles here */'}
+  
+  &:hover {
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+  }
+  
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+\`;
+
+interface ${componentName}Props {
+  className?: string;
+  children?: React.ReactNode;
+}
+
+const ${componentName}: React.FC<${componentName}Props> = ({ 
+  className, 
+  children 
+}) => {
+  return (
+    <Styled${componentName} className={className}>
+      {children}
+    </Styled${componentName}>
+  );
+};
+
+export default ${componentName};`;
+    }
+
+    function convertCSSToTailwindClasses(css) {
+      if (!css || typeof css !== 'string') return 'block';
+      
+      const lines = css.split('\n').filter(line => line.trim());
+      const classes = [];
+      
+      for (const line of lines) {
+        const [property, value] = line.split(':').map(s => s?.trim().replace(';', ''));
+        if (!property || !value) continue;
+        
+        // Enhanced Tailwind conversion
+        switch (property) {
+          case 'display':
+            if (value === 'flex') classes.push('flex');
+            else if (value === 'block') classes.push('block');
+            else if (value === 'inline') classes.push('inline');
+            else if (value === 'inline-block') classes.push('inline-block');
+            else if (value === 'grid') classes.push('grid');
+            break;
+          case 'width':
+            if (value === '100%') classes.push('w-full');
+            else if (value.endsWith('px')) classes.push(`w-[${value}]`);
+            else if (value.endsWith('%')) classes.push(`w-[${value}]`);
+            break;
+          case 'height':
+            if (value === '100%') classes.push('h-full');
+            else if (value.endsWith('px')) classes.push(`h-[${value}]`);
+            else if (value.endsWith('%')) classes.push(`h-[${value}]`);
+            break;
+          case 'background':
+          case 'background-color':
+            if (value.startsWith('#')) classes.push(`bg-[${value}]`);
+            else if (value.includes('rgb')) classes.push(`bg-[${value}]`);
+            break;
+          case 'color':
+            if (value.startsWith('#')) classes.push(`text-[${value}]`);
+            else if (value.includes('rgb')) classes.push(`text-[${value}]`);
+            break;
+          case 'border-radius':
+            if (value.endsWith('px')) classes.push(`rounded-[${value}]`);
+            break;
+          case 'padding':
+            if (value.endsWith('px')) classes.push(`p-[${value}]`);
+            break;
+          case 'margin':
+            if (value.endsWith('px')) classes.push(`m-[${value}]`);
+            break;
+          case 'font-size':
+            if (value.endsWith('px')) classes.push(`text-[${value}]`);
+            break;
+          case 'font-weight':
+            if (value === 'bold' || value === '700') classes.push('font-bold');
+            else if (value === '600') classes.push('font-semibold');
+            else if (value === '500') classes.push('font-medium');
+            break;
+          case 'text-align':
+            if (value === 'center') classes.push('text-center');
+            else if (value === 'right') classes.push('text-right');
+            else if (value === 'left') classes.push('text-left');
+            break;
+          case 'justify-content':
+            if (value === 'center') classes.push('justify-center');
+            else if (value === 'space-between') classes.push('justify-between');
+            else if (value === 'flex-end') classes.push('justify-end');
+            break;
+          case 'align-items':
+            if (value === 'center') classes.push('items-center');
+            else if (value === 'flex-end') classes.push('items-end');
+            else if (value === 'flex-start') classes.push('items-start');
+            break;
+        }
+      }
+      
+      return classes.length > 0 ? classes.join(' ') : 'block';
+    }
+
+    function handleDevDataExtracted(data) {
+      updateStatus('ready', 'Code extracted successfully');
+      showMessage('Data extracted and sent to MCP server', 'success');
+      
+      // Generate and display code with extracted data
+      currentSelection = data;
+      generateAllCodeFormats(data);
+      
+      const codeSection = document.getElementById('code-section');
+      if (!codeSection.classList.contains('hidden')) {
+        displayCode();
+      }
+    }
+
+    function switchTab(format) {
+      currentFormat = format;
+      
+      // Update tab buttons
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.format === format);
+      });
+      
+      // Update code title
+      const extensions = {
+        react: '.tsx',
+        css: '.css',
+        tailwind: '.tsx',
+        styled: '.tsx'
+      };
+      
+      const componentName = currentSelection ? sanitizeComponentName(currentSelection.name) : 'Component';
+      const codeTitle = document.getElementById('code-title');
+      if (codeTitle) {
+        codeTitle.textContent = `${componentName}${extensions[format]}`;
+      }
+      
+      // Display code for current format
+      displayCode();
+    }
+
+    function displayCode() {
+      const codePreview = document.getElementById('code-preview');
+      const loadingSkeleton = document.getElementById('loading-skeleton');
+      
+      // Hide loading skeleton completely
+      if (loadingSkeleton) {
+        loadingSkeleton.style.display = 'none';
+      }
+      
+      // Get current code
+      const code = generatedCode[currentFormat] || '// No code generated yet';
+      
+      // Clear previous content
+      codePreview.innerHTML = '';
+      
+      // Apply syntax highlighting
+      const highlightedCode = applySyntaxHighlighting(code, currentFormat);
+      codePreview.innerHTML = highlightedCode;
+      
+      console.log('Code displayed:', { format: currentFormat, codeLength: code.length });
+    }
+
+    function showLoadingState() {
+      const loadingSkeleton = document.getElementById('loading-skeleton');
+      const codePreview = document.getElementById('code-preview');
+      
+      if (loadingSkeleton) {
+        loadingSkeleton.style.display = 'block';
+      }
+      if (codePreview) {
+        codePreview.innerHTML = '';
+      }
+    }
+
+    function applySyntaxHighlighting(code, format) {
+      if (!code) return '';
+      
+      // Simple syntax highlighting
+      let highlighted = code
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/&/g, '&amp;');
+      
+      if (format === 'react' || format === 'tailwind' || format === 'styled') {
+        highlighted = highlighted
+          .replace(/(import|export|const|let|var|function|return|interface|type)\b/g, '<span class="syntax-keyword">$1</span>')
+          .replace(/(React|FC|Props|styled|div|span|button)\b/g, '<span class="syntax-type">$1</span>')
+          .replace(/(['"`])((?:\\.|(?!\1)[^\\])*?)\1/g, '<span class="syntax-string">$1$2$1</span>')
+          .replace(/(\/\/.*$)/gm, '<span class="syntax-comment">$1</span>')
+          .replace(/(\w+)(?=\s*:)/g, '<span class="syntax-property">$1</span>');
+      } else if (format === 'css') {
+        highlighted = highlighted
+          .replace(/(\.[\w-]+)/g, '<span class="syntax-type">$1</span>')
+          .replace(/([\w-]+)(?=\s*:)/g, '<span class="syntax-property">$1</span>')
+          .replace(/(:)([^;]+)(;)/g, '$1<span class="syntax-value">$2</span>$3')
+          .replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="syntax-comment">$1</span>');
+      }
+      
+      return highlighted;
+    }
+
+    function copyCurrentCode() {
+      const code = generatedCode[currentFormat];
+      if (!code) {
+        showMessage('No code to copy', 'error');
+        return;
+      }
+      
+      copyToClipboard(code, `${currentFormat.charAt(0).toUpperCase() + currentFormat.slice(1)} code copied!`);
+    }
+
+    function copyAllCode() {
+      const componentName = currentSelection ? sanitizeComponentName(currentSelection.name) : 'Component';
+      const allCode = `// ${componentName} - All Generated Code Formats
+
+// ========== REACT COMPONENT ==========
+${generatedCode.react}
+
+// ========== CSS STYLES ==========
+${generatedCode.css}
+
+// ========== TAILWIND COMPONENT ==========
+${generatedCode.tailwind}
+
+// ========== STYLED COMPONENTS ==========
+${generatedCode.styled}`;
+      
+      copyToClipboard(allCode, 'All code formats copied!');
+    }
+
+    function copyToClipboard(text, successMessage) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+          showMessage(successMessage, 'success');
+          // Visual feedback
+          flashCopyButton();
+        }).catch(err => {
+          console.error('Failed to copy:', err);
+          showMessage('Failed to copy to clipboard', 'error');
+        });
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          document.execCommand('copy');
+          showMessage(successMessage, 'success');
+          flashCopyButton();
+        } catch (err) {
+          console.error('Failed to copy:', err);
+          showMessage('Failed to copy to clipboard', 'error');
+        } finally {
+          textArea.remove();
+        }
+      }
+    }
+
+    function flashCopyButton() {
+      const copyButton = document.getElementById('copy-button');
+      const originalText = copyButton.textContent;
+      copyButton.textContent = '✅ Copied!';
+      copyButton.style.background = 'var(--figma-color-bg-success)';
+      
+      setTimeout(() => {
+        copyButton.textContent = originalText;
+        copyButton.style.background = 'var(--figma-color-bg-brand)';
+      }, 1500);
+    }
+
+    function handleKeyboardShortcuts(event) {
+      // Cmd/Ctrl + C to copy current code
+      if ((event.metaKey || event.ctrlKey) && event.key === 'c' && !event.shiftKey) {
+        const codeSection = document.getElementById('code-section');
+        if (!codeSection.classList.contains('hidden')) {
+          event.preventDefault();
+          copyCurrentCode();
+        }
+      }
+      
+      // Cmd/Ctrl + Shift + C to copy all code
+      if ((event.metaKey || event.ctrlKey) && event.key === 'C' && event.shiftKey) {
+        const codeSection = document.getElementById('code-section');
+        if (!codeSection.classList.contains('hidden')) {
+          event.preventDefault();
+          copyAllCode();
+        }
+      }
+    }
+
+    function showMessage(text, type = 'info') {
+      const messagesContainer = document.getElementById('messages');
+      const message = document.createElement('div');
+      message.className = `message ${type}`;
+      message.textContent = text;
+      
+      messagesContainer.appendChild(message);
+      
+      // Remove message after 5 seconds
+      setTimeout(() => {
+        if (message.parentNode) {
+          message.parentNode.removeChild(message);
+        }
+      }, 5000);
+    }
+
+    function checkMCPServer() {
+      // This would normally ping the MCP server
+      // For now, we'll assume it's available if the plugin is loaded
+      setTimeout(() => {
+        mcpServerConnected = true;
+        document.getElementById('mcp-status').textContent = 'Connected';
+        document.getElementById('mcp-status').style.color = 'var(--figma-color-text-success)';
+      }, 1000);
+    }
+
+    function openDocs(event) {
+      event.preventDefault();
+      parent.postMessage({ 
+        pluginMessage: { 
+          type: 'OPEN_IN_BROWSER', 
+          url: 'https://github.com/your-org/figma-context-mcp' 
+        } 
+      }, '*');
+    }
+
+    function sanitizeComponentName(name) {
+      return name
+        .replace(/[^a-zA-Z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join('')
+        .replace(/^[a-z]/, char => char.toUpperCase())
+        .replace(/[^a-zA-Z0-9]/g, '')
+        || 'Component';
+    }
+
+    // Send ready message to plugin
+    parent.postMessage({ pluginMessage: { type: 'ui-ready' } }, '*');
+  </script>
+</body>
+</html>

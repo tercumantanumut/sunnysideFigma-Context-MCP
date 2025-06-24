@@ -1,0 +1,212 @@
+/* Login Security Component */
+.login {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 64px;
+  flex: 1 0 0;
+}
+
+.loginContent {
+  display: flex;
+  width: 736px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 64px;
+  flex: 1 0 0;
+}
+
+/* Title Section */
+.title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+  gap: 121px;
+}
+
+.heading {
+  color: #23262F;
+  text-align: center;
+  font-family: "DM Sans", sans-serif;
+  font-size: 48px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 56px;
+  letter-spacing: -0.96px;
+  margin: 0;
+}
+
+/* Account Info Section */
+.accountInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 64px;
+  align-self: stretch;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+}
+
+.sectionTitle {
+  width: 735px;
+  color: #23262F;
+  font-family: 'Poppins', sans-serif;
+  font-size: 24px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 32px;
+  margin: 0;
+}
+
+.sectionContent {
+  display: flex;
+  width: 735px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+}
+
+/* Info Items */
+.infoItem {
+  display: flex;
+  width: 735px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+}
+
+.infoDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.infoLabel {
+  color: #000000;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 24px;
+}
+
+.infoDescription {
+  color: #777E90;
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+/* Social Accounts */
+.socialAccounts {
+  display: flex;
+  width: 735px;
+  align-items: center;
+  gap: 48px;
+}
+
+.socialAccount {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 32px;
+  flex: 1 0 0;
+}
+
+.socialDivider {
+  width: 1px;
+  align-self: stretch;
+  border-radius: 1px;
+  background: #E6E8EC;
+}
+
+/* Device History */
+.deviceHistory {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+}
+
+.historyItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  align-self: stretch;
+  gap: 32px;
+}
+
+/* Dividers */
+.divider {
+  height: 1px;
+  align-self: stretch;
+  border-radius: 1px;
+  background: #E6E8EC;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .loginContent {
+    width: 100%;
+  }
+  
+  .sectionTitle,
+  .sectionContent,
+  .infoItem,
+  .socialAccounts {
+    width: 100%;
+  }
+  
+  .title {
+    flex-direction: column;
+    gap: 24px;
+    align-items: flex-start;
+  }
+  
+  .heading {
+    font-size: 36px;
+    line-height: 44px;
+    text-align: left;
+  }
+}
+
+@media (max-width: 768px) {
+  .heading {
+    font-size: 28px;
+    line-height: 36px;
+  }
+  
+  .sectionTitle {
+    font-size: 20px;
+    line-height: 28px;
+  }
+  
+  .sectionContent,
+  .infoItem,
+  .socialAccount,
+  .historyItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .socialAccounts {
+    flex-direction: column;
+    gap: 24px;
+  }
+  
+  .socialDivider {
+    width: 100%;
+    height: 1px;
+  }
+}
