@@ -2,6 +2,12 @@
 
 > Transform Figma designs into production code with AI-powered MCP integration and advanced design system management
 
+# ACKNOWLEDGMENT:
+This Software incorporates concepts and architectural patterns from the Framelink Figma MCP project (MIT License), but represents a substantially different implementation with enhanced features, precision control, and workflows.
+
+Original Framelink MCP project: https://github.com/GLips/Figma-Context-MCP
+Framelink website: https://www.framelink.ai
+
 ## 🎯 FINAL AIM: FULLY AUTONOMOUS FIGMA TO CODE PROJECT BUILDER
 
 **Our ultimate vision is to create a completely autonomous system that can take any Figma design and generate a full, production-ready project with zero human intervention.**
