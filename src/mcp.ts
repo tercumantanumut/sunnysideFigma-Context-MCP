@@ -8,6 +8,7 @@ import { pluginTools, handlePluginTool } from "./tools/plugin-tools.js";
 import { figmaDevTools, handleFigmaDevTool } from "./tools/figma-dev-tools.js";
 import { figmaCodegenTools, handleFigmaCodegenTool } from "./tools/figma-codegen-tools.js";
 import { designSystemTrackerTools, handleDesignSystemTrackerTool } from "./tools/design-system-tracker.js";
+import { getLatestDevData } from "./plugin-integration.js";
 
 const serverInfo = {
   name: "Figma MCP Server",
@@ -119,9 +120,9 @@ function registerTools(
   // Tool to download images
   server.tool(
     "download_figma_images",
-    "Download SVG and PNG images used in a Figma file based on the IDs of image or icon nodes",
+    "Download SVG and PNG images from Figma. Automatically detects file key from current plugin session - no manual file key needed!",
     {
-      fileKey: z.string().describe("The key of the Figma file containing the node"),
+      fileKey: z.string().optional().describe("The key of the Figma file containing the node. Leave empty to automatically detect from the latest plugin data, or use 'auto'/'current' for explicit auto-detection, or provide explicit file key only if auto-detection fails."),
       nodes: z
         .object({
           nodeId: z
@@ -174,12 +175,26 @@ function registerTools(
     },
     async ({ fileKey, nodes, localPath, svgOptions, pngScale }) => {
       try {
+        // Auto-detect file key from latest dev data if needed
+        let actualFileKey: string;
+        if (!fileKey || fileKey === "auto" || fileKey === "current") {
+          const latestData = getLatestDevData();
+          if (latestData?.fileKey) {
+            actualFileKey = latestData.fileKey;
+            Logger.log(`Auto-detected file key: ${actualFileKey}`);
+          } else {
+            throw new Error("No file key available in current dev data. Please provide the file key manually or ensure Figma plugin is connected.");
+          }
+        } else {
+          actualFileKey = fileKey;
+        }
+
         const imageFills = nodes.filter(({ imageRef }) => !!imageRef) as {
           nodeId: string;
           imageRef: string;
           fileName: string;
         }[];
-        const fillDownloads = figmaService.getImageFills(fileKey, imageFills, localPath);
+        const fillDownloads = figmaService.getImageFills(actualFileKey, imageFills, localPath);
         const renderRequests = nodes
           .filter(({ imageRef }) => !imageRef)
           .map(({ nodeId, fileName }) => ({
@@ -189,7 +204,7 @@ function registerTools(
           }));
 
         const renderDownloads = figmaService.getImages(
-          fileKey,
+          actualFileKey,
           renderRequests,
           localPath,
           pngScale,

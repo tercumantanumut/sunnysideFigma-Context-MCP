@@ -53,6 +53,11 @@ export interface FigmaDevData {
     png1x?: Uint8Array;
     svg?: string;
   };
+  // File context information for automatic asset downloads
+  fileKey?: string | null;
+  fileName?: string | null;
+  pageId?: string | null;
+  pageName?: string | null;
 }
 
 // Store received dev data for MCP access

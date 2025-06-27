@@ -362,7 +362,12 @@ async function extractNodeData(node) {
     styling: {},
     children: [],
     designTokens: {},
-    exportData: null
+    exportData: null,
+    // Add file context information (requires enablePrivatePluginApi: true)
+    fileKey: figma.fileKey || null,
+    fileName: figma.root ? figma.root.name : null,
+    pageId: figma.currentPage ? figma.currentPage.id : null,
+    pageName: figma.currentPage ? figma.currentPage.name : null
   };
 
   try {

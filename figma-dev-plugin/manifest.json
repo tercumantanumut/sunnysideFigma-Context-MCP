@@ -7,6 +7,7 @@
   "documentAccess": "dynamic-page",
   "editorType": ["figma", "dev", "figjam", "slides"],
   "capabilities": ["codegen", "inspect", "vscode"],
+  "enablePrivatePluginApi": true,
   "codegenLanguages": [
     {"label": "React", "value": "react"},
     {"label": "CSS", "value": "css"},
