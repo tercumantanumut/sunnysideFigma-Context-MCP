@@ -120,9 +120,9 @@ function registerTools(
   // Tool to download images
   server.tool(
     "download_figma_images",
-    "Download SVG and PNG images from Figma. Automatically detects file key from current plugin session - no manual file key needed!",
+    "Download SVG and PNG images from Figma. Use get_figma_dev_code first to get the file key from plugin data.",
     {
-      fileKey: z.string().optional().describe("The key of the Figma file containing the node. Leave empty to automatically detect from the latest plugin data, or use 'auto'/'current' for explicit auto-detection, or provide explicit file key only if auto-detection fails."),
+      fileKey: z.string().describe("The key of the Figma file containing the node. Get this from the plugin data using get_figma_dev_code tool."),
       nodes: z
         .object({
           nodeId: z
@@ -175,19 +175,7 @@ function registerTools(
     },
     async ({ fileKey, nodes, localPath, svgOptions, pngScale }) => {
       try {
-        // Auto-detect file key from latest dev data if needed
-        let actualFileKey: string;
-        if (!fileKey || fileKey === "auto" || fileKey === "current") {
-          const latestData = getLatestDevData();
-          if (latestData?.fileKey) {
-            actualFileKey = latestData.fileKey;
-            Logger.log(`Auto-detected file key: ${actualFileKey}`);
-          } else {
-            throw new Error("No file key available in current dev data. Please provide the file key manually or ensure Figma plugin is connected.");
-          }
-        } else {
-          actualFileKey = fileKey;
-        }
+        const actualFileKey = fileKey;
 
         const imageFills = nodes.filter(({ imageRef }) => !!imageRef) as {
           nodeId: string;

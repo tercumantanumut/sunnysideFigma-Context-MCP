@@ -292,174 +292,6 @@
       100% { background-position: -200% 0; }
     }
 
-    /* Assets Section */
-    .assets-container {
-      background: var(--figma-color-bg-secondary);
-      border: 1px solid var(--figma-color-border);
-      border-radius: 6px;
-      overflow: hidden;
-    }
-
-    .assets-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px;
-      background: var(--figma-color-bg);
-      border-bottom: 1px solid var(--figma-color-border);
-    }
-
-    .assets-info {
-      display: flex;
-      gap: 12px;
-      font-size: 11px;
-      color: var(--figma-color-text-secondary);
-    }
-
-    .assets-actions {
-      display: flex;
-      gap: 6px;
-    }
-
-    .assets-filters {
-      display: flex;
-      padding: 8px;
-      gap: 4px;
-      background: var(--figma-color-bg);
-      border-bottom: 1px solid var(--figma-color-border);
-    }
-
-    .filter-button {
-      background: transparent;
-      border: 1px solid var(--figma-color-border);
-      border-radius: 4px;
-      padding: 4px 8px;
-      font-size: 10px;
-      color: var(--figma-color-text-secondary);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .filter-button:hover {
-      background: var(--figma-color-bg-hover);
-    }
-
-    .filter-button.active {
-      background: var(--figma-color-bg-brand);
-      color: white;
-      border-color: var(--figma-color-bg-brand);
-    }
-
-    .assets-grid {
-      padding: 12px;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-      gap: 8px;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-
-    .asset-item {
-      background: var(--figma-color-bg);
-      border: 1px solid var(--figma-color-border);
-      border-radius: 4px;
-      padding: 8px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      position: relative;
-    }
-
-    .asset-item:hover {
-      background: var(--figma-color-bg-hover);
-      border-color: var(--figma-color-bg-brand);
-    }
-
-    .asset-preview {
-      width: 100%;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 4px;
-      border-radius: 2px;
-      overflow: hidden;
-      background: var(--figma-color-bg-secondary);
-    }
-
-    .asset-preview img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-
-    .asset-preview .asset-icon {
-      font-size: 20px;
-      opacity: 0.5;
-    }
-
-    .asset-info {
-      font-size: 9px;
-      color: var(--figma-color-text-secondary);
-    }
-
-    .asset-format {
-      font-weight: 500;
-      margin-bottom: 2px;
-    }
-
-    .asset-details {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .asset-size {
-      opacity: 0.7;
-    }
-
-    .asset-download {
-      position: absolute;
-      top: 4px;
-      right: 4px;
-      background: var(--figma-color-bg-brand);
-      color: white;
-      border: none;
-      border-radius: 2px;
-      padding: 2px 4px;
-      font-size: 8px;
-      cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-
-    .asset-item:hover .asset-download {
-      opacity: 1;
-    }
-
-    .assets-empty {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 32px 16px;
-      color: var(--figma-color-text-secondary);
-    }
-
-    .empty-icon {
-      font-size: 32px;
-      margin-bottom: 8px;
-      opacity: 0.5;
-    }
-
-    .empty-text {
-      font-size: 12px;
-      font-weight: 500;
-      margin-bottom: 4px;
-    }
-
-    .empty-subtitle {
-      font-size: 10px;
-      opacity: 0.7;
-    }
 
     .message {
       padding: 8px 12px;
@@ -564,45 +396,8 @@
       <button class="button secondary" id="preview-button" disabled>
         👁️ Preview Code
       </button>
-      <button class="button secondary" id="extract-assets-button" disabled>
-        🎨 Extract Assets
-      </button>
     </div>
 
-    <div class="section" id="assets-section" class="hidden">
-      <div class="section-title">🎨 Assets</div>
-      
-      <div class="assets-container">
-        <div class="assets-header">
-          <div class="assets-info">
-            <span id="assets-count">0 assets</span>
-            <span id="assets-size">0 B</span>
-          </div>
-          <div class="assets-actions">
-            <button class="action-button secondary" id="download-all-button" title="Download all assets">
-              📥 Download All
-            </button>
-            <button class="action-button secondary" id="send-to-mcp-button" title="Send assets to MCP server">
-              🚀 Send to MCP
-            </button>
-          </div>
-        </div>
-        
-        <div class="assets-filters">
-          <button class="filter-button active" data-filter="all">All</button>
-          <button class="filter-button" data-filter="PNG">PNG</button>
-          <button class="filter-button" data-filter="SVG">SVG</button>
-        </div>
-        
-        <div class="assets-grid" id="assets-grid">
-          <div class="assets-empty" id="assets-empty">
-            <div class="empty-icon">🖼️</div>
-            <div class="empty-text">No assets available</div>
-            <div class="empty-subtitle">Select a component or frame to extract assets</div>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <div class="section" id="code-section" class="hidden">
       <div class="section-title">💻 Generated Code</div>
@@ -666,7 +461,7 @@
           <strong>Code Preferences:</strong> Use Figma's code preferences to customize unit scaling (px to rem), component format, and styling approach.
         </p>
         <p>
-          <strong>MCP Integration:</strong> All extracted data is sent to the MCP server for advanced AI workflows and code generation.
+          <strong>MCP Integration:</strong> All extracted data is sent to the MCP server for advanced AI workflows and code generation. Use the AI agent to download images and assets automatically.
         </p>
       </div>
     </div>
@@ -679,7 +474,7 @@
           <li>Native Figma CSS API integration</li>
           <li>React, CSS, Tailwind, Styled Components</li>
           <li>Design token extraction</li>
-          <li>MCP server integration for AI workflows</li>
+          <li>AI-powered asset downloading via MCP</li>
           <li>VS Code compatibility</li>
         </ul>
       </div>
@@ -701,8 +496,6 @@
       styled: ''
     };
     let currentFormat = 'react';
-    let currentAssets = [];
-    let currentAssetFilter = 'all';
 
     // Initialize UI
     document.addEventListener('DOMContentLoaded', () => {
@@ -712,19 +505,9 @@
       // Set up event listeners
       document.getElementById('extract-button').addEventListener('click', extractDevCode);
       document.getElementById('preview-button').addEventListener('click', previewCode);
-      document.getElementById('extract-assets-button').addEventListener('click', extractAssets);
       document.getElementById('docs-link').addEventListener('click', openDocs);
       document.getElementById('copy-button').addEventListener('click', copyCurrentCode);
       document.getElementById('copy-all-button').addEventListener('click', copyAllCode);
-      
-      // Assets event listeners
-      document.getElementById('download-all-button').addEventListener('click', downloadAllAssets);
-      document.getElementById('send-to-mcp-button').addEventListener('click', sendAssetsToMCP);
-      
-      // Asset filter switching
-      document.querySelectorAll('.filter-button').forEach(button => {
-        button.addEventListener('click', () => switchAssetFilter(button.dataset.filter));
-      });
       
       // Tab switching
       document.querySelectorAll('.tab-button').forEach(button => {
@@ -745,13 +528,6 @@
           break;
         case 'dev-data-extracted':
           handleDevDataExtracted(message.data);
-          break;
-        case 'assets-extracting':
-          showMessage(message.message, 'info');
-          updateStatus('working', 'Extracting assets...');
-          break;
-        case 'assets-extracted':
-          handleAssetsExtracted(message.data);
           break;
         case 'success':
           showMessage(message.message, 'success');
@@ -781,7 +557,6 @@
       const nodeDimensions = document.getElementById('node-dimensions');
       const extractButton = document.getElementById('extract-button');
       const previewButton = document.getElementById('preview-button');
-      const extractAssetsButton = document.getElementById('extract-assets-button');
       
       if (nodeData) {
         nodeType.textContent = nodeData.type;
@@ -791,10 +566,6 @@
         extractButton.disabled = false;
         previewButton.disabled = false;
         
-        // Enable extract assets button only if node can export
-        const canExport = nodeData.exportData && nodeData.exportData.canExport;
-        extractAssetsButton.disabled = !canExport;
-        
         updateStatus('ready', `Selected: ${nodeData.name}`);
       } else {
         nodeType.textContent = '-';
@@ -803,186 +574,11 @@
         
         extractButton.disabled = true;
         previewButton.disabled = true;
-        extractAssetsButton.disabled = true;
-        
-        // Clear assets display
-        updateAssetsDisplay(null);
         
         updateStatus('ready', 'Ready for Dev Mode');
       }
     }
 
-    function updateAssetsDisplay(exportData) {
-      const assetsSection = document.getElementById('assets-section');
-      
-      // Always hide assets section initially - only show after extraction
-      assetsSection.classList.add('hidden');
-      currentAssets = [];
-    }
-
-    function extractAssets() {
-      if (!currentSelection) {
-        showMessage('Please select an element first', 'error');
-        return;
-      }
-      
-      parent.postMessage({ 
-        pluginMessage: { type: 'extract-assets' } 
-      }, '*');
-    }
-
-    function handleAssetsExtracted(data) {
-      updateStatus('ready', 'Assets extracted successfully');
-      showMessage(`Extracted ${data.assets.length} assets`, 'success');
-      
-      // Show and populate assets section
-      const assetsSection = document.getElementById('assets-section');
-      const assetsCount = document.getElementById('assets-count');
-      const assetsSize = document.getElementById('assets-size');
-      
-      assetsSection.classList.remove('hidden');
-      currentAssets = data.assets;
-      
-      // Update summary
-      const totalSize = currentAssets.reduce((sum, asset) => sum + (asset.size || 0), 0);
-      assetsCount.textContent = `${currentAssets.length} asset${currentAssets.length !== 1 ? 's' : ''}`;
-      assetsSize.textContent = formatFileSize(totalSize);
-      
-      // Render assets grid
-      renderAssetsGrid();
-    }
-
-    function renderAssetsGrid() {
-      const assetsGrid = document.getElementById('assets-grid');
-      const assetsEmpty = document.getElementById('assets-empty');
-      
-      // Filter assets based on current filter
-      const filteredAssets = currentAssets.filter(asset => {
-        if (currentAssetFilter === 'all') return true;
-        return asset.format === currentAssetFilter;
-      });
-      
-      if (filteredAssets.length === 0) {
-        assetsEmpty.style.display = 'block';
-        assetsGrid.innerHTML = '';
-        assetsGrid.appendChild(assetsEmpty);
-        return;
-      }
-      
-      assetsEmpty.style.display = 'none';
-      assetsGrid.innerHTML = '';
-      
-      filteredAssets.forEach((asset, index) => {
-        const assetItem = createAssetItem(asset, index);
-        assetsGrid.appendChild(assetItem);
-      });
-    }
-
-    function createAssetItem(asset, index) {
-      const item = document.createElement('div');
-      item.className = 'asset-item';
-      
-      const formatLabel = asset.format === 'PNG' ? `${asset.format} ${asset.scale}x` : 
-                         asset.format === 'SVG' ? `${asset.format} ${asset.variant}` : asset.format;
-      
-      item.innerHTML = `
-        <div class="asset-preview">
-          ${asset.dataUrl ? 
-            `<img src="${asset.dataUrl}" alt="${asset.filename}" />` : 
-            `<div class="asset-icon">${asset.format === 'PNG' ? '🖼️' : '📐'}</div>`
-          }
-        </div>
-        <div class="asset-info">
-          <div class="asset-format">${formatLabel}</div>
-          <div class="asset-details">
-            <span class="asset-size">${formatFileSize(asset.size || 0)}</span>
-          </div>
-        </div>
-        <button class="asset-download" onclick="downloadAsset(${index})" title="Download">⬇</button>
-      `;
-      
-      item.addEventListener('click', () => previewAsset(asset));
-      
-      return item;
-    }
-
-    function switchAssetFilter(filter) {
-      currentAssetFilter = filter;
-      
-      // Update filter buttons
-      document.querySelectorAll('.filter-button').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.filter === filter);
-      });
-      
-      // Re-render grid
-      renderAssetsGrid();
-    }
-
-    function downloadAsset(index) {
-      const asset = currentAssets[index];
-      if (!asset || !asset.data) return;
-      
-      try {
-        const blob = new Blob([asset.data], { 
-          type: asset.format === 'PNG' ? 'image/png' : 'image/svg+xml' 
-        });
-        const url = URL.createObjectURL(blob);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = asset.filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-        URL.revokeObjectURL(url);
-        showMessage(`Downloaded ${asset.filename}`, 'success');
-      } catch (error) {
-        console.error('Download failed:', error);
-        showMessage('Download failed', 'error');
-      }
-    }
-
-    function downloadAllAssets() {
-      if (currentAssets.length === 0) {
-        showMessage('No assets to download', 'error');
-        return;
-      }
-      
-      currentAssets.forEach((asset, index) => {
-        setTimeout(() => downloadAsset(index), index * 100); // Stagger downloads
-      });
-      
-      showMessage(`Downloading ${currentAssets.length} assets...`, 'success');
-    }
-
-    function sendAssetsToMCP() {
-      if (!currentSelection || !currentAssets.length) {
-        showMessage('No assets to send to MCP', 'error');
-        return;
-      }
-      
-      // This will be handled by the existing MCP integration
-      // when extractDevCode is called - assets are already included
-      parent.postMessage({ 
-        pluginMessage: { type: 'extract-dev-code' } 
-      }, '*');
-      
-      showMessage('Sending assets to MCP server...', 'success');
-    }
-
-    function previewAsset(asset) {
-      // Could add a modal preview here in the future
-      console.log('Preview asset:', asset);
-    }
-
-    function formatFileSize(bytes) {
-      if (bytes === 0) return '0 B';
-      const k = 1024;
-      const sizes = ['B', 'KB', 'MB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-    }
 
     function extractDevCode() {
       if (!currentSelection) {

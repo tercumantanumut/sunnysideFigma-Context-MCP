@@ -102,7 +102,7 @@ export function setupPluginIntegration(app: express.Application): void {
 
       // Store the latest data
       latestDevData = devData;
-      
+
       // Add to history (keep last 10)
       devDataHistory.unshift(devData);
       if (devDataHistory.length > 10) {
