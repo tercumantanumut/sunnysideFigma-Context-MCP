@@ -366,7 +366,7 @@ async function getReact(args: { includeCSS?: boolean; componentFormat?: string }
         return {
           content: [{
             type: "text",
-            text: data.content
+            text: data.content || "No React component content available"
           }]
         };
       } else {
@@ -378,24 +378,24 @@ async function getReact(args: { includeCSS?: boolean; componentFormat?: string }
           }]
         };
       }
+    } else {
+      return {
+        isError: true,
+        content: [{
+          type: "text",
+          text: `HTTP server returned status ${response.status}. Make sure the Figma plugin HTTP server is running on localhost:3333`
+        }]
+      };
     }
   } catch (error) {
     return {
       isError: true,
       content: [{
         type: "text",
-        text: `Error fetching React component: ${error instanceof Error ? error.message : 'Unknown error'}`
+        text: `Error fetching React component: ${error instanceof Error ? error.message : 'Unknown error'}. Make sure the Figma plugin HTTP server is running on localhost:3333`
       }]
     };
   }
-
-  return {
-    isError: true,
-    content: [{
-      type: "text",
-      text: "Unable to fetch React component from server"
-    }]
-  };
 }
 
 async function getJSON(args: { includeChildren?: boolean; pretty?: boolean }): Promise<any> {
@@ -411,7 +411,7 @@ async function getJSON(args: { includeChildren?: boolean; pretty?: boolean }): P
         return {
           content: [{
             type: "text",
-            text: data.content
+            text: data.content || "No JSON data content available"
           }]
         };
       } else {
@@ -423,24 +423,24 @@ async function getJSON(args: { includeChildren?: boolean; pretty?: boolean }): P
           }]
         };
       }
+    } else {
+      return {
+        isError: true,
+        content: [{
+          type: "text",
+          text: `HTTP server returned status ${response.status}. Make sure the Figma plugin HTTP server is running on localhost:3333`
+        }]
+      };
     }
   } catch (error) {
     return {
       isError: true,
       content: [{
         type: "text",
-        text: `Error fetching JSON data: ${error instanceof Error ? error.message : 'Unknown error'}`
+        text: `Error fetching JSON data: ${error instanceof Error ? error.message : 'Unknown error'}. Make sure the Figma plugin HTTP server is running on localhost:3333`
       }]
     };
   }
-
-  return {
-    isError: true,
-    content: [{
-      type: "text",
-      text: "Unable to fetch JSON data from server"
-    }]
-  };
 }
 
 async function getUIScreenshots(args: { includeImageData?: boolean }): Promise<any> {
