@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/tercumantanumut-sunnysidefigma-context-mcp-badge.png)](https://mseep.ai/app/tercumantanumut-sunnysidefigma-context-mcp)
+
 # Sunnyside Figma MCP
 
 What if you could talk to your Figma designs and turn them into production code? That's what we built.
