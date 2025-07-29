@@ -171,37 +171,58 @@ export async function handleFigmaCodegenTool(name: string, args: any): Promise<a
   }
 }
 
-async function getFigmaCSS(args: { nodeId?: string; format?: string }): Promise<any> {
+async function getFigmaCSS(args: { nodeId?: string; format?: string; fileKey?: string }): Promise<any> {
   try {
-    const response = await fetch(`http://localhost:3333/plugin/latest-dev-data`);
-    
-    if (!response.ok) {
+    // First try to get plugin data
+    const pluginResponse = await fetch(`http://localhost:3333/plugin/latest-dev-data`).catch(() => null);
+
+    let devData = null;
+
+    if (pluginResponse && pluginResponse.ok) {
+      const result = await pluginResponse.json();
+      if (result.success && result.data) {
+        devData = result.data;
+      }
+    }
+
+    // If no plugin data, try to use Figma API data
+    if (!devData && args.fileKey && args.nodeId) {
+      const { FigmaService } = await import('../services/figma.js');
+      const figmaService = new FigmaService();
+      const nodeData = await figmaService.getNode(args.fileKey, args.nodeId, 3);
+
+      if (nodeData && nodeData.nodes && nodeData.nodes.length > 0) {
+        const node = nodeData.nodes[0];
+        devData = {
+          id: node.id,
+          name: node.name,
+          type: node.type,
+          layout: node.layout,
+          styles: node.styles,
+          children: node.children || []
+        };
+      }
+    }
+
+    if (!devData) {
       return {
         isError: true,
         content: [{
           type: "text",
-          text: "No dev data available. Please extract code from Figma using the plugin first."
+          text: "No component data available. Please either:\n1. Extract a component using the Figma plugin, or\n2. Provide fileKey and nodeId parameters to generate from Figma API data"
         }]
       };
     }
-
-    const result = await response.json();
-    if (!result.success || !result.data) {
-      return {
-        isError: true,
-        content: [{
-          type: "text",
-          text: "No dev data available. Please extract code from Figma using the plugin first."
-        }]
-      };
-    }
-
-    const devData = result.data;
     const format = args.format || "formatted";
 
     // Prefer native CSS from getCSSAsync() if available and convert to string
     let css = convertCSSObjectToString(devData.nativeCSS) || devData.css || "";
     const isNative = !!devData.nativeCSS;
+
+    // If no CSS available, generate from layout data
+    if (!css && devData.layout) {
+      css = generateCSSFromLayout(devData);
+    }
 
     let output = "";
     switch (format) {
@@ -237,32 +258,64 @@ async function getFigmaCSS(args: { nodeId?: string; format?: string }): Promise<
   }
 }
 
-async function getReactComponent(args: { componentName?: string; styleType?: string; includeProps?: boolean }): Promise<any> {
+async function getReactComponent(args: { componentName?: string; styleType?: string; includeProps?: boolean; fileKey?: string; nodeId?: string }): Promise<any> {
   try {
-    const response = await fetch(`http://localhost:3333/plugin/latest-dev-data`);
-    
-    if (!response.ok) {
+    // First try to get plugin data
+    const pluginResponse = await fetch(`http://localhost:3333/plugin/latest-dev-data`).catch(() => null);
+
+    let devData = null;
+
+    if (pluginResponse && pluginResponse.ok) {
+      const result = await pluginResponse.json();
+      if (result.success && result.data) {
+        devData = result.data;
+      }
+    }
+
+    // If no plugin data, try to use Figma API data
+    if (!devData && args.fileKey && args.nodeId) {
+      const { FigmaService } = await import('../services/figma.js');
+      const figmaService = new FigmaService();
+      const nodeData = await figmaService.getNode(args.fileKey, args.nodeId, 3);
+
+      if (nodeData && nodeData.nodes && nodeData.nodes.length > 0) {
+        const node = nodeData.nodes[0];
+        devData = {
+          id: node.id,
+          name: node.name,
+          type: node.type,
+          layout: node.layout,
+          styles: node.styles,
+          children: node.children || []
+        };
+      }
+    }
+
+    // If still no data, check if we have any recent project overview data
+    if (!devData) {
+      const overviewResponse = await fetch(`http://localhost:3333/plugin/latest-project-overview`).catch(() => null);
+      if (overviewResponse && overviewResponse.ok) {
+        const overviewResult = await overviewResponse.json();
+        if (overviewResult.success && overviewResult.data) {
+          return {
+            isError: true,
+            content: [{
+              type: "text",
+              text: `No specific component data available. Found project overview for "${overviewResult.data.fileName}" with ${overviewResult.data.frames} frames. Please provide fileKey and nodeId parameters, or extract a specific component using the Figma plugin first.`
+            }]
+          };
+        }
+      }
+
       return {
         isError: true,
         content: [{
           type: "text",
-          text: "No dev data available. Please extract code from Figma using the plugin first."
+          text: "No component data available. Please either:\n1. Extract a component using the Figma plugin, or\n2. Provide fileKey and nodeId parameters to generate from Figma API data"
         }]
       };
     }
 
-    const result = await response.json();
-    if (!result.success || !result.data) {
-      return {
-        isError: true,
-        content: [{
-          type: "text",
-          text: "No dev data available. Please extract code from Figma using the plugin first."
-        }]
-      };
-    }
-
-    const devData = result.data;
     const componentName = sanitizeComponentName(args.componentName || devData.name);
     const styleType = args.styleType || "css-modules";
     const includeProps = args.includeProps !== false;
@@ -794,4 +847,46 @@ function generatePluginUI(pluginName: string): string {
   </div>
 </body>
 </html>`;
+}
+
+// Helper function to generate CSS from Figma layout data
+function generateCSSFromLayout(nodeData: any): string {
+  const layout = nodeData.layout;
+  if (!layout) return "";
+
+  const css: string[] = [];
+
+  // Dimensions
+  if (layout.dimensions) {
+    if (layout.dimensions.width) css.push(`width: ${layout.dimensions.width}px`);
+    if (layout.dimensions.height) css.push(`height: ${layout.dimensions.height}px`);
+  }
+
+  // Position
+  if (layout.position) {
+    css.push(`position: absolute`);
+    if (layout.position.x !== undefined) css.push(`left: ${layout.position.x}px`);
+    if (layout.position.y !== undefined) css.push(`top: ${layout.position.y}px`);
+  }
+
+  // Background
+  if (nodeData.styles?.background) {
+    const bg = nodeData.styles.background;
+    if (bg.color) {
+      css.push(`background-color: ${bg.color}`);
+    }
+  }
+
+  // Border radius
+  if (nodeData.styles?.borderRadius) {
+    css.push(`border-radius: ${nodeData.styles.borderRadius}px`);
+  }
+
+  // Display properties based on type
+  if (nodeData.type === 'FRAME' || nodeData.type === 'COMPONENT') {
+    css.push(`display: flex`);
+    css.push(`flex-direction: column`);
+  }
+
+  return css.join(';\n  ') + (css.length > 0 ? ';' : '');
 }

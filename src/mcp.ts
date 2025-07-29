@@ -509,12 +509,16 @@ function registerFigmaCodegenTools(server: McpServer): void {
   // Register clean CSS tool
   server.tool(
     "get_figma_css",
-    "Get clean CSS from Figma using native getCSSAsync() API - follows Dev Mode standards",
+    "Get clean CSS from Figma using native getCSSAsync() API or generate from Figma API data",
     {
       nodeId: z
         .string()
         .optional()
         .describe("Optional Figma node ID. If not provided, uses current selection."),
+      fileKey: z
+        .string()
+        .optional()
+        .describe("Figma file key (required if no plugin data available)"),
       format: z
         .enum(["raw", "formatted", "with-selector"])
         .optional()
@@ -538,7 +542,7 @@ function registerFigmaCodegenTools(server: McpServer): void {
   // Register clean React component tool
   server.tool(
     "get_react_component",
-    "Generate clean React component with TypeScript - minimal, production-ready",
+    "Generate clean React component with TypeScript - works with plugin data or Figma API",
     {
       componentName: z
         .string()
@@ -553,7 +557,15 @@ function registerFigmaCodegenTools(server: McpServer): void {
         .boolean()
         .optional()
         .default(true)
-        .describe("Include TypeScript interface for props")
+        .describe("Include TypeScript interface for props"),
+      fileKey: z
+        .string()
+        .optional()
+        .describe("Figma file key (required if no plugin data available)"),
+      nodeId: z
+        .string()
+        .optional()
+        .describe("Figma node ID (required if no plugin data available)")
     },
     async (args) => {
       try {
