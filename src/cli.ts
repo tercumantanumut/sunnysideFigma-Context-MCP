@@ -22,6 +22,15 @@ export async function startServer(): Promise<void> {
   });
 
   if (isStdioMode) {
+    // In STDIO mode, also start HTTP server for plugin integration
+    console.error(`Initializing Figma MCP Server in STDIO mode with plugin integration on port ${config.port}...`);
+
+    // Start HTTP server for plugin endpoints (non-blocking)
+    startHttpServer(config.port, server).catch((error) => {
+      console.error("Failed to start HTTP server for plugin integration:", error);
+    });
+
+    // Connect STDIO transport for MCP communication
     const transport = new StdioServerTransport();
     await server.connect(transport);
   } else {

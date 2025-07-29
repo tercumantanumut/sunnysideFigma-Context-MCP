@@ -142,6 +142,32 @@ function setupInspectionMode() {
   
   // Handle UI messages
   figma.ui.onmessage = async (msg) => {
+    if (msg.type === 'scan-project') {
+      try {
+        figma.ui.postMessage({
+          type: 'scanning-project',
+          message: 'Scanning entire project...'
+        });
+        
+        const projectData = await scanEntireProject();
+        
+        // Send to MCP server
+        await sendProjectOverviewToMCP(projectData);
+        
+        figma.ui.postMessage({
+          type: 'project-scanned',
+          data: projectData
+        });
+        
+      } catch (error) {
+        console.error('Error scanning project:', error);
+        figma.ui.postMessage({
+          type: 'error',
+          message: error.message
+        });
+      }
+    }
+    
     if (msg.type === 'extract-dev-code') {
       const selection = figma.currentPage.selection;
       
@@ -1084,6 +1110,325 @@ async function sendAssetsToServer(nodeId, assets) {
   }
 }
 
+// Project Overview Functions
+async function scanEntireProject() {
+  console.log('🔍 Starting full project scan...');
+  
+  const projectData = {
+    file: {
+      key: figma.fileKey || null,
+      name: figma.root ? figma.root.name : 'Untitled',
+      lastModified: new Date().toISOString(),
+      version: figma.root ? figma.root.version : null,
+      thumbnailUrl: null,
+      editorType: figma.editorType
+    },
+    structure: {
+      pages: [],
+      totalElements: 0,
+      depth: 3
+    },
+    components: {
+      components: {},
+      componentSets: {},
+      usage: {
+        mostUsed: [],
+        totalInstances: 0
+      }
+    },
+    designSystem: {
+      colors: [],
+      textStyles: [],
+      effects: [],
+      variables: {}
+    },
+    stats: {
+      totalPages: 0,
+      totalFrames: 0,
+      totalComponents: 0,
+      totalComponentSets: 0,
+      totalInstances: 0,
+      totalTextLayers: 0,
+      totalImages: 0,
+      uniqueStyles: 0
+    }
+  };
+  
+  try {
+    // Load all pages first
+    await figma.loadAllPagesAsync();
+    
+    // Get all pages
+    const pages = figma.root.children;
+    projectData.stats.totalPages = pages.length;
+    
+    // Process each page
+    for (const page of pages) {
+      console.log(`📄 Processing page: ${page.name}`);
+      
+      // Ensure page is loaded
+      await page.loadAsync();
+      
+      const pageData = await processPage(page);
+      projectData.structure.pages.push(pageData);
+      
+      // Update stats
+      projectData.stats.totalFrames += pageData.frameCount;
+      projectData.structure.totalElements += pageData.totalElements;
+    }
+    
+    // Find all components and component sets
+    await findAllComponents(figma.root, projectData);
+    
+    // Extract design system information
+    await extractDesignSystem(projectData);
+    
+    // Count component usage
+    await countComponentUsage(figma.root, projectData);
+    
+    console.log('✅ Project scan complete:', projectData);
+    return projectData;
+    
+  } catch (error) {
+    console.error('❌ Error scanning project:', error);
+    throw error;
+  }
+}
+
+async function processPage(page) {
+  const pageData = {
+    id: page.id,
+    name: page.name,
+    thumbnailUrl: null,
+    frameCount: 0,
+    frames: [],
+    totalElements: 0
+  };
+  
+  // Ensure page is loaded before accessing children
+  if (!page.children) {
+    await page.loadAsync();
+  }
+  
+  // Process all frames in the page
+  for (const node of page.children) {
+    if (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE') {
+      pageData.frameCount++;
+      
+      const frameInfo = {
+        id: node.id,
+        name: node.name,
+        type: node.type,
+        childrenCount: node.children ? node.children.length : 0,
+        hasPrototype: node.reactions && node.reactions.length > 0,
+        width: Math.round(node.width),
+        height: Math.round(node.height)
+      };
+      
+      pageData.frames.push(frameInfo);
+    }
+    
+    // Count total elements
+    pageData.totalElements += countElements(node);
+  }
+  
+  return pageData;
+}
+
+function countElements(node) {
+  let count = 1;
+  
+  if (node.children && node.children.length > 0) {
+    for (const child of node.children) {
+      count += countElements(child);
+    }
+  }
+  
+  return count;
+}
+
+async function findAllComponents(node, projectData, depth = 0) {
+  if (depth > 10) return; // Prevent infinite recursion
+  
+  // For pages, ensure they are loaded
+  if (node.type === 'PAGE' && !node.children) {
+    await node.loadAsync();
+  }
+  
+  if (node.type === 'COMPONENT') {
+    projectData.components.components[node.id] = {
+      id: node.id,
+      name: node.name,
+      description: node.description || '',
+      type: 'COMPONENT',
+      instances: 0
+    };
+    projectData.stats.totalComponents++;
+  }
+  
+  if (node.type === 'COMPONENT_SET') {
+    const variants = node.children ? node.children.length : 0;
+    projectData.components.componentSets[node.id] = {
+      id: node.id,
+      name: node.name,
+      description: node.description || '',
+      properties: node.componentPropertyDefinitions || {},
+      variants: variants
+    };
+    projectData.stats.totalComponentSets++;
+  }
+  
+  // Recursively process children
+  if (node.children && node.children.length > 0) {
+    for (const child of node.children) {
+      await findAllComponents(child, projectData, depth + 1);
+    }
+  }
+}
+
+async function extractDesignSystem(projectData) {
+  try {
+    // Extract local styles using synchronous methods (async versions not available)
+    const paintStyles = figma.getLocalPaintStyles();
+    const textStyles = figma.getLocalTextStyles();
+    const effectStyles = figma.getLocalEffectStyles();
+    
+    // Process paint styles (colors)
+    for (const style of paintStyles) {
+      if (style.paints && style.paints.length > 0) {
+        const paint = style.paints[0];
+        if (paint.type === 'SOLID' && paint.color) {
+          const { r, g, b } = paint.color;
+          const hex = `#${Math.round(r * 255).toString(16).padStart(2, '0')}${Math.round(g * 255).toString(16).padStart(2, '0')}${Math.round(b * 255).toString(16).padStart(2, '0')}`;
+          
+          projectData.designSystem.colors.push({
+            name: style.name,
+            value: hex,
+            id: style.id
+          });
+        }
+      }
+    }
+    
+    // Process text styles
+    for (const style of textStyles) {
+      projectData.designSystem.textStyles.push({
+        name: style.name,
+        id: style.id,
+        properties: {
+          fontName: style.fontName,
+          fontSize: style.fontSize,
+          lineHeight: style.lineHeight,
+          letterSpacing: style.letterSpacing,
+          textCase: style.textCase,
+          textDecoration: style.textDecoration
+        }
+      });
+    }
+    
+    // Process effect styles
+    for (const style of effectStyles) {
+      if (style.effects && style.effects.length > 0) {
+        const effect = style.effects[0];
+        projectData.designSystem.effects.push({
+          name: style.name,
+          id: style.id,
+          type: effect.type
+        });
+      }
+    }
+    
+    projectData.stats.uniqueStyles = paintStyles.length + textStyles.length + effectStyles.length;
+    
+    // Extract variables if available (using synchronous method)
+    if (figma.variables && figma.variables.getLocalVariables) {
+      try {
+        const variables = figma.variables.getLocalVariables();
+        for (const variable of variables) {
+          projectData.designSystem.variables[variable.name] = {
+            id: variable.id,
+            type: variable.resolvedType,
+            value: variable.valuesByMode
+          };
+        }
+      } catch (varError) {
+        console.warn('Could not extract variables:', varError);
+      }
+    }
+    
+  } catch (error) {
+    console.warn('Could not extract all design system info:', error);
+  }
+}
+
+async function countComponentUsage(node, projectData, depth = 0) {
+  if (depth > 10) return;
+  
+  if (node.type === 'INSTANCE') {
+    projectData.stats.totalInstances++;
+    
+    try {
+      // Use async method to get main component
+      const mainComponent = await node.getMainComponentAsync();
+      if (mainComponent) {
+        const componentId = mainComponent.id;
+        if (projectData.components.components[componentId]) {
+          projectData.components.components[componentId].instances++;
+        }
+      }
+    } catch (error) {
+      console.warn('Could not get main component:', error);
+    }
+  }
+  
+  if (node.type === 'TEXT') {
+    projectData.stats.totalTextLayers++;
+  }
+  
+  // Check for image fills
+  if (node.fills && Array.isArray(node.fills)) {
+    for (const fill of node.fills) {
+      if (fill.type === 'IMAGE') {
+        projectData.stats.totalImages++;
+      }
+    }
+  }
+  
+  // Recursively process children
+  if (node.children && node.children.length > 0) {
+    for (const child of node.children) {
+      await countComponentUsage(child, projectData, depth + 1);
+    }
+  }
+}
+
+// Send project overview to MCP server
+async function sendProjectOverviewToMCP(projectData) {
+  try {
+    console.log('📡 Sending project overview to MCP server...');
+    
+    const response = await fetch('http://localhost:3333/plugin/project-overview', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(projectData)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('✅ Project overview sent successfully:', result);
+    
+  } catch (error) {
+    console.error('❌ Error sending project overview:', error);
+    throw error;
+  }
+}
+
 // Handle VS Code specific requirements
 if (figma.vscode) {
   console.log('🔧 Running in VS Code - special handling enabled');
@@ -1101,3 +1446,6 @@ if (figma.vscode) {
     };
   })(figma.ui.onmessage);
 }
+
+// Start the plugin
+console.log('Figma Context MCP Plugin initialized with project overview features');

@@ -8,6 +8,8 @@ import { pluginTools, handlePluginTool } from "./tools/plugin-tools.js";
 import { figmaDevTools, handleFigmaDevTool } from "./tools/figma-dev-tools.js";
 import { figmaCodegenTools, handleFigmaCodegenTool } from "./tools/figma-codegen-tools.js";
 import { designSystemTrackerTools, handleDesignSystemTrackerTool } from "./tools/design-system-tracker.js";
+import { figmaProjectOverviewTools, handleProjectOverviewTool } from "./tools/figma-project-overview-tools.js";
+import { deepAnalysisTools, handleDeepAnalysisTool } from "./tools/deep-analysis-tools.js";
 import { getLatestDevData } from "./plugin-integration.js";
 
 const serverInfo = {
@@ -50,6 +52,13 @@ function registerTools(
   
   // Register Design System Evolution Tracker tools
   registerDesignSystemTrackerTools(server);
+  
+  // Register Project Overview tools
+  registerProjectOverviewTools(server, figmaService);
+
+  // Register Deep Analysis tools
+  registerDeepAnalysisTools(server, figmaService);
+  
   // Tool to get file information
   server.tool(
     "get_figma_data",
@@ -976,6 +985,131 @@ function registerDesignSystemTrackerTools(server: McpServer): void {
       } catch (error) {
         const message = error instanceof Error ? error.message : JSON.stringify(error);
         Logger.error("Error in list_token_simulations:", message);
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Error: ${message}` }],
+        };
+      }
+    }
+  );
+}
+
+function registerProjectOverviewTools(server: McpServer, figmaService: FigmaService): void {
+  // Register get_figma_project_overview tool
+  server.tool(
+    "get_figma_project_overview",
+    "Get comprehensive overview of entire Figma file including structure, components, design system, and statistics. Perfect for understanding the complete project context.",
+    {
+      fileKey: z.string().describe("The Figma file key to analyze"),
+      includePages: z.boolean().optional().default(true).describe("Include detailed page structure"),
+      includeThumbnails: z.boolean().optional().default(false).describe("Include thumbnail URLs (requires additional API calls)"),
+      includePrototypes: z.boolean().optional().default(true).describe("Include prototype flow analysis"),
+      includeStats: z.boolean().optional().default(true).describe("Include usage statistics"),
+      depth: z.number().optional().default(2).describe("How deep to traverse the node tree (1-3)"),
+      outputFormat: z.enum(["structured", "summary", "visual"]).optional().default("structured").describe("Output format style")
+    },
+    async (args) => {
+      try {
+        return await handleProjectOverviewTool("get_figma_project_overview", args, figmaService);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : JSON.stringify(error);
+        Logger.error("Error in get_figma_project_overview:", message);
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Error: ${message}` }],
+        };
+      }
+    }
+  );
+  
+  // Register get_figma_page_structure tool
+  server.tool(
+    "get_figma_page_structure", 
+    "Get detailed structure of specific pages in a Figma file with frame hierarchy",
+    {
+      fileKey: z.string().describe("The Figma file key"),
+      pageNames: z.array(z.string()).optional().describe("Specific page names to analyze (empty = all pages)"),
+      includeFrameDetails: z.boolean().optional().default(true).describe("Include detailed frame information"),
+      maxDepth: z.number().optional().default(3).describe("Maximum depth to traverse")
+    },
+    async (args) => {
+      try {
+        return await handleProjectOverviewTool("get_figma_page_structure", args, figmaService);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : JSON.stringify(error);
+        Logger.error("Error in get_figma_page_structure:", message);
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Error: ${message}` }],
+        };
+      }
+    }
+  );
+  
+  // Register analyze_figma_components tool
+  server.tool(
+    "analyze_figma_components",
+    "Analyze component library usage and organization in a Figma file",
+    {
+      fileKey: z.string().describe("The Figma file key"),
+      sortBy: z.enum(["usage", "name", "modified"]).optional().default("usage").describe("How to sort components"),
+      includeVariants: z.boolean().optional().default(true).describe("Include component variants analysis"),
+      limit: z.number().optional().default(50).describe("Maximum number of components to return")
+    },
+    async (args) => {
+      try {
+        return await handleProjectOverviewTool("analyze_figma_components", args, figmaService);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : JSON.stringify(error);
+        Logger.error("Error in analyze_figma_components:", message);
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Error: ${message}` }],
+        };
+      }
+    }
+  );
+  
+  // Register get_plugin_project_overview tool
+  server.tool(
+    "get_plugin_project_overview",
+    "Get the project overview data directly from the Figma plugin scan. This provides the exact statistics shown in the plugin UI including all pages, frames, and instances.",
+    {
+      outputFormat: z.enum(["structured", "summary", "visual"]).optional().default("visual").describe("Output format style")
+    },
+    async (args) => {
+      try {
+        return await handleProjectOverviewTool("get_plugin_project_overview", args, figmaService);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : JSON.stringify(error);
+        Logger.error("Error in get_plugin_project_overview:", message);
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Error: ${message}` }],
+        };
+      }
+    }
+  );
+}
+
+function registerDeepAnalysisTools(server: McpServer, figmaService: FigmaService): void {
+  // Register analyze_app_structure tool
+  server.tool(
+    "analyze_app_structure",
+    "Perform comprehensive analysis of entire app structure, extracting detailed information from all pages and key frames without manual selection",
+    {
+      fileKey: z.string().describe("The Figma file key to analyze"),
+      includeAllFrames: z.boolean().optional().default(true).describe("Include detailed analysis of all frames"),
+      extractAssets: z.boolean().optional().default(false).describe("Extract asset information for each frame"),
+      maxDepth: z.number().optional().default(4).describe("Maximum depth to traverse for each node"),
+      outputFormat: z.enum(["detailed", "summary", "json"]).optional().default("detailed").describe("Output format")
+    },
+    async (args) => {
+      try {
+        return await handleDeepAnalysisTool("analyze_app_structure", args, figmaService);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : JSON.stringify(error);
+        Logger.error("Error in analyze_app_structure:", message);
         return {
           isError: true,
           content: [{ type: "text", text: `Error: ${message}` }],

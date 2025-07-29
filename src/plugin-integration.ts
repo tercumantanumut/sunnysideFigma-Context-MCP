@@ -64,6 +64,9 @@ export interface FigmaDevData {
 let latestDevData: FigmaDevData | null = null;
 const devDataHistory: FigmaDevData[] = [];
 
+// Store project overview data
+let latestProjectOverview: any = null;
+
 export function setupPluginIntegration(app: express.Application): void {
   // Enable CORS for plugin requests
   app.use('/plugin', cors({
@@ -156,7 +159,61 @@ export function setupPluginIntegration(app: express.Application): void {
       success: true,
       status: 'Plugin integration active',
       hasLatestData: !!latestDevData,
-      historyCount: devDataHistory.length
+      historyCount: devDataHistory.length,
+      hasProjectOverview: !!latestProjectOverview
+    });
+  });
+
+  // Endpoint to receive project overview from Figma plugin
+  app.post('/plugin/project-overview', express.json({ limit: '50mb' }), (req, res) => {
+    try {
+      const projectData = req.body;
+      
+      Logger.important('Received project overview from Figma plugin:', {
+        fileName: projectData.file?.name,
+        pages: projectData.stats?.totalPages,
+        components: projectData.stats?.totalComponents,
+        frames: projectData.stats?.totalFrames
+      });
+
+      // Store the latest project overview
+      latestProjectOverview = projectData;
+
+      res.json({
+        success: true,
+        message: 'Project overview received successfully',
+        timestamp: new Date().toISOString(),
+        summary: {
+          pages: projectData.stats?.totalPages || 0,
+          frames: projectData.stats?.totalFrames || 0,
+          components: projectData.stats?.totalComponents || 0,
+          instances: projectData.stats?.totalInstances || 0
+        }
+      });
+
+    } catch (error) {
+      Logger.error('Error processing project overview:', error);
+      res.status(400).json({
+        success: false,
+        error: 'Invalid project overview format'
+      });
+    }
+  });
+
+  // Endpoint to get latest project overview (for MCP tools)
+  app.get('/plugin/latest-project-overview', (req, res) => {
+    if (!latestProjectOverview) {
+      res.status(404).json({
+        success: false,
+        message: 'No project overview available'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: latestProjectOverview,
+      timestamp: new Date().toISOString()
     });
   });
 
@@ -298,4 +355,14 @@ export function clearDevData(): void {
   latestDevData = null;
   devDataHistory.length = 0;
   Logger.log('Dev data cleared');
+}
+
+// Export functions for project overview
+export function getLatestProjectOverview(): any {
+  return latestProjectOverview;
+}
+
+export function clearProjectOverview(): void {
+  latestProjectOverview = null;
+  Logger.log('Project overview cleared');
 }

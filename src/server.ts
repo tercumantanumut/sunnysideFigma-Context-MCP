@@ -105,7 +105,7 @@ export async function startHttpServer(port: number, mcpServer: McpServer): Promi
       return;
     }
 
-    console.log(`Received session termination request for session ${sessionId}`);
+    console.error(`Received session termination request for session ${sessionId}`);
 
     try {
       const transport = transports.streamable[sessionId];

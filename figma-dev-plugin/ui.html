@@ -396,6 +396,12 @@
       <button class="button secondary" id="preview-button" disabled>
         👁️ Preview Code
       </button>
+      
+      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--figma-color-border);">
+        <button class="button secondary" id="scan-project-button" style="width: 100%;">
+          🔍 Scan Entire Project
+        </button>
+      </div>
     </div>
 
 
@@ -433,6 +439,36 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="section" id="project-overview-section" class="hidden">
+      <div class="section-title">📊 Project Overview</div>
+      
+      <div class="info-card" id="project-stats">
+        <div class="section-title" style="font-size: 11px; margin-bottom: 8px;">📈 Quick Stats</div>
+        <div id="project-stats-content">
+          <div class="loading-skeleton">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+            <div class="skeleton-line"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="info-card" id="project-structure" style="margin-top: 12px;">
+        <div class="section-title" style="font-size: 11px; margin-bottom: 8px;">📂 File Structure</div>
+        <div id="project-structure-content" style="font-size: 11px; font-family: monospace;">
+          <div class="loading-skeleton">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+            <div class="skeleton-line"></div>
+          </div>
+        </div>
+      </div>
+      
+      <button class="button secondary" id="close-overview-button" style="margin-top: 12px;">
+        ✖️ Close Overview
+      </button>
     </div>
 
     <div class="settings-section">
@@ -505,6 +541,8 @@
       // Set up event listeners
       document.getElementById('extract-button').addEventListener('click', extractDevCode);
       document.getElementById('preview-button').addEventListener('click', previewCode);
+      document.getElementById('scan-project-button').addEventListener('click', scanProject);
+      document.getElementById('close-overview-button').addEventListener('click', closeProjectOverview);
       document.getElementById('docs-link').addEventListener('click', openDocs);
       document.getElementById('copy-button').addEventListener('click', copyCurrentCode);
       document.getElementById('copy-all-button').addEventListener('click', copyAllCode);
@@ -534,6 +572,13 @@
           break;
         case 'error':
           showMessage(message.message, 'error');
+          break;
+        case 'scanning-project':
+          showMessage(message.message, 'info');
+          showProjectOverviewSection();
+          break;
+        case 'project-scanned':
+          handleProjectScanned(message.data);
           break;
       }
     };
@@ -1053,6 +1098,69 @@ ${generatedCode.styled}`;
         .replace(/^[a-z]/, char => char.toUpperCase())
         .replace(/[^a-zA-Z0-9]/g, '')
         || 'Component';
+    }
+
+    // Project Overview Functions
+    function scanProject() {
+      updateStatus('ready', 'Scanning project...');
+      parent.postMessage({ 
+        pluginMessage: { type: 'scan-project' } 
+      }, '*');
+    }
+    
+    function showProjectOverviewSection() {
+      document.getElementById('project-overview-section').classList.remove('hidden');
+      document.getElementById('selection-section').classList.add('hidden');
+      document.getElementById('code-section').classList.add('hidden');
+    }
+    
+    function closeProjectOverview() {
+      document.getElementById('project-overview-section').classList.add('hidden');
+      document.getElementById('selection-section').classList.remove('hidden');
+    }
+    
+    function handleProjectScanned(projectData) {
+      updateStatus('ready', 'Project scan complete');
+      
+      // Display stats
+      const statsContent = document.getElementById('project-stats-content');
+      statsContent.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div>📄 Pages: ${projectData.stats.totalPages}</div>
+          <div>🖼️ Frames: ${projectData.stats.totalFrames}</div>
+          <div>🧩 Components: ${projectData.stats.totalComponents}</div>
+          <div>📦 Instances: ${projectData.stats.totalInstances}</div>
+          <div>📝 Text Layers: ${projectData.stats.totalTextLayers}</div>
+          <div>🎨 Styles: ${projectData.stats.uniqueStyles}</div>
+        </div>
+      `;
+      
+      // Display structure
+      const structureContent = document.getElementById('project-structure-content');
+      let structureHtml = '';
+      
+      structureHtml += `🎨 ${projectData.file.name}\n`;
+      structureHtml += `└─ ${projectData.stats.totalPages} pages\n`;
+      
+      projectData.structure.pages.forEach((page, i) => {
+        const isLast = i === projectData.structure.pages.length - 1;
+        structureHtml += `   ${isLast ? '└─' : '├─'} 📄 ${page.name} (${page.frameCount} frames)\n`;
+        
+        // Show first 3 frames
+        page.frames.slice(0, 3).forEach((frame, j) => {
+          const isFrameLast = j === Math.min(2, page.frames.length - 1);
+          structureHtml += `   ${isLast ? '   ' : '│  '}${isFrameLast ? '└─' : '├─'} 🖼️ ${frame.name}\n`;
+        });
+        
+        if (page.frames.length > 3) {
+          structureHtml += `   ${isLast ? '   ' : '│  '}└─ ... ${page.frames.length - 3} more\n`;
+        }
+      });
+      
+      structureContent.innerHTML = `<pre style="margin: 0; white-space: pre-wrap;">${structureHtml}</pre>`;
+      
+      // Show success message
+      showMessage('Project overview sent to MCP server successfully!', 'success');
     }
 
     // Send ready message to plugin

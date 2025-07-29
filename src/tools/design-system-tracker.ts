@@ -974,17 +974,17 @@ async function scanCodebaseForTokens(
       try {
         const fileContent = await fs.readFile(filePath, 'utf-8');
         const fileUsages = await parseFileForTokens(filePath, fileContent, tokenFormats);
-        console.log(`Scanned ${filePath}: found ${fileUsages.length} token usages`);
+        console.error(`Scanned ${filePath}: found ${fileUsages.length} token usages`);
 
         // Debug: Log found usages for debugging
         if (fileUsages.length > 0) {
-          console.log(`  Usages: ${fileUsages.map(u => `${u.tokenId} (${u.context})`).join(', ')}`);
+          console.error(`  Usages: ${fileUsages.map(u => `${u.tokenId} (${u.context})`).join(', ')}`);
         }
 
         usages.push(...fileUsages);
         scannedFiles++;
       } catch (error) {
-        console.warn(`Failed to read file ${filePath}:`, error);
+        console.error(`Failed to read file ${filePath}:`, error);
       }
     }
 
@@ -1397,19 +1397,19 @@ function parseCSSFile(filePath: string, content: string, tokens: DesignToken[]):
             });
 
             tokenMatchCount++;
-            console.log(`  ✅ Found match: ${match[0]} at line ${lineNumber}`);
+            console.error(`  ✅ Found match: ${match[0]} at line ${lineNumber}`);
 
             // Update token mapping with high confidence
             updateTokenMapping(token.id, tokenValue, 0.98);
           }
         }
       } catch (regexError) {
-        console.warn(`⚠️ Regex error for token ${token.id} with value "${valueToMatch}":`, regexError);
+        console.error(`⚠️ Regex error for token ${token.id} with value "${valueToMatch}":`, regexError);
       }
     }
 
     if (tokenMatchCount > 0) {
-      console.log(`✅ Token ${token.id}: found ${tokenMatchCount} matches`);
+      console.error(`✅ Token ${token.id}: found ${tokenMatchCount} matches`);
     }
   }
 

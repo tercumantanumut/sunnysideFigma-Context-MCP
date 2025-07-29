@@ -175,6 +175,148 @@ export class FigmaService {
     writeLogs("figma-simplified.yml", simplifiedResponse);
     return simplifiedResponse;
   }
+
+  // New methods for project overview functionality
+  async getFileStructure(fileKey: string, depth: number = 2): Promise<any> {
+    try {
+      Logger.log(`Getting file structure for ${fileKey} with depth ${depth}`);
+      const fileData = await this.getFile(fileKey, depth);
+      
+      // Extract hierarchical structure
+      const structure = {
+        name: fileData.name,
+        pages: this.extractPageStructure(fileData.nodes || []),
+        components: Object.keys(fileData.components || {}).length,
+        componentSets: Object.keys(fileData.componentSets || {}).length,
+        totalNodes: this.countTotalNodes(fileData.nodes || [])
+      };
+      
+      return structure;
+    } catch (error) {
+      Logger.error("Error getting file structure:", error);
+      throw error;
+    }
+  }
+
+  async getProjectMetadata(fileKey: string): Promise<any> {
+    try {
+      Logger.log(`Getting project metadata for ${fileKey}`);
+      const endpoint = `/files/${fileKey}?depth=1`;
+      const response = await this.request<GetFileResponse>(endpoint);
+      
+      return {
+        name: response.name,
+        lastModified: response.lastModified,
+        version: response.version,
+        thumbnailUrl: response.thumbnailUrl,
+        editorType: response.editorType,
+        role: response.role
+      };
+    } catch (error) {
+      Logger.error("Error getting project metadata:", error);
+      throw error;
+    }
+  }
+
+  async getComponentLibrary(fileKey: string): Promise<any> {
+    try {
+      Logger.log(`Getting component library for ${fileKey}`);
+      const fileData = await this.getFile(fileKey, 1);
+      
+      const components = fileData.components || {};
+      const componentSets = fileData.componentSets || {};
+      
+      // Count instances
+      const instanceCounts: Record<string, number> = {};
+      this.countComponentInstances(fileData.nodes || [], instanceCounts);
+      
+      // Build component library data
+      const library = {
+        components: Object.entries(components).map(([id, comp]) => ({
+          id,
+          name: comp.name,
+          description: '', // SimplifiedComponentDefinition doesn't have description
+          instances: instanceCounts[id] || 0
+        })),
+        componentSets: Object.entries(componentSets).map(([id, set]) => ({
+          id,
+          name: set.name,
+          description: set.description || '',
+          variantCount: 0 // SimplifiedComponentSetDefinition doesn't have children
+        }))
+      };
+      
+      return library;
+    } catch (error) {
+      Logger.error("Error getting component library:", error);
+      throw error;
+    }
+  }
+
+  async generatePageThumbnails(fileKey: string, pageIds: string[]): Promise<Record<string, string>> {
+    try {
+      Logger.log(`Generating thumbnails for ${pageIds.length} pages`);
+      const endpoint = `/images/${fileKey}?ids=${pageIds.join(",")}&format=png&scale=0.5`;
+      const response = await this.request<GetImagesResponse>(endpoint);
+      
+      const images = response.images || {};
+      // Convert any null values to empty strings
+      const result: Record<string, string> = {};
+      for (const [key, value] of Object.entries(images)) {
+        result[key] = value || '';
+      }
+      return result;
+    } catch (error) {
+      Logger.error("Error generating page thumbnails:", error);
+      throw error;
+    }
+  }
+
+  // Helper methods
+  private extractPageStructure(nodes: any[]): any[] {
+    return nodes
+      .filter(node => node.type === "CANVAS")
+      .map(page => ({
+        id: page.id,
+        name: page.name,
+        frames: (page.children || [])
+          .filter((child: any) => child.type === "FRAME" || child.type === "COMPONENT")
+          .map((frame: any) => ({
+            id: frame.id,
+            name: frame.name,
+            type: frame.type,
+            childCount: frame.children?.length || 0
+          }))
+      }));
+  }
+
+  private countTotalNodes(nodes: any[]): number {
+    let count = 0;
+    
+    function traverse(node: any) {
+      count++;
+      if (node.children && Array.isArray(node.children)) {
+        node.children.forEach(traverse);
+      }
+    }
+    
+    nodes.forEach(traverse);
+    return count;
+  }
+
+  private countComponentInstances(nodes: any[], counts: Record<string, number>): void {
+    function traverse(node: any) {
+      if (node.type === "INSTANCE" && node.componentId) {
+        counts[node.componentId] = (counts[node.componentId] || 0) + 1;
+      }
+      
+      if (node.children && Array.isArray(node.children)) {
+        node.children.forEach(traverse);
+      }
+    }
+    
+    nodes.forEach(traverse);
+  }
 }
 
 function writeLogs(name: string, value: any) {
