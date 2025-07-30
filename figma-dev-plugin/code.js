@@ -127,13 +127,24 @@ function setupInspectionMode() {
     
     if (selection.length === 1) {
       const node = selection[0];
-      const nodeData = await extractNodeData(node);
-      
-      // Send updated data to UI only
-      figma.ui.postMessage({
-        type: 'selection-changed',
-        data: nodeData
-      });
+      try {
+        const nodeData = await extractNodeData(node);
+        
+        // Sanitize data before sending to UI
+        const sanitizedData = sanitizeForSerialization(nodeData);
+        
+        // Send updated data to UI only
+        figma.ui.postMessage({
+          type: 'selection-changed',
+          data: sanitizedData
+        });
+      } catch (error) {
+        console.error('Error processing selection:', error);
+        figma.ui.postMessage({
+          type: 'error',
+          message: `Failed to process selection: ${error.message}`
+        });
+      }
       
       // Don't auto-send to MCP server on selection change
       // Only send when user explicitly clicks extract button
@@ -183,12 +194,15 @@ function setupInspectionMode() {
         const node = selection[0];
         const nodeData = await extractNodeData(node);
         
+        // Sanitize data before sending
+        const sanitizedData = sanitizeForSerialization(nodeData);
+        
         figma.ui.postMessage({
           type: 'dev-data-extracted',
-          data: nodeData
+          data: sanitizedData
         });
         
-        await sendToMCPServer(nodeData);
+        await sendToMCPServer(sanitizedData);
         
         figma.ui.postMessage({
           type: 'success',
@@ -199,7 +213,7 @@ function setupInspectionMode() {
         console.error('Error extracting dev data:', error);
         figma.ui.postMessage({
           type: 'error',
-          message: error.message
+          message: `Failed to extract data: ${error.message}`
         });
       }
     }
@@ -844,8 +858,9 @@ function rgbToHex(rgb, opacity = 1) {
 function serializeProperty(prop) {
   if (prop === undefined || prop === null) return null;
   
-  if (typeof prop === 'symbol') return prop.toString();
+  if (typeof prop === 'symbol') return `[Symbol: ${prop.description || 'unnamed'}]`;
   if (typeof prop === 'function') return '[Function]';
+  if (typeof prop === 'bigint') return prop.toString() + 'n';
   
   if (Array.isArray(prop)) {
     return prop.map(item => serializeProperty(item));
@@ -856,10 +871,14 @@ function serializeProperty(prop) {
     for (const key in prop) {
       try {
         const value = prop[key];
-        if (typeof value === 'symbol') {
-          safe[key] = value.toString();
+        if (value === null || value === undefined) {
+          safe[key] = value;
+        } else if (typeof value === 'symbol') {
+          safe[key] = `[Symbol: ${value.description || 'unnamed'}]`;
         } else if (typeof value === 'function') {
           safe[key] = '[Function]';
+        } else if (typeof value === 'bigint') {
+          safe[key] = value.toString() + 'n';
         } else {
           safe[key] = serializeProperty(value);
         }
@@ -918,7 +937,7 @@ function sanitizeForSerialization(data, maxDepth = 10, currentDepth = 0, seen = 
   
   // Handle primitive types
   if (typeof data === 'symbol') {
-    return data.toString();
+    return `[Symbol: ${data.description || 'unnamed'}]`;
   }
   
   if (typeof data === 'function') {
@@ -926,7 +945,7 @@ function sanitizeForSerialization(data, maxDepth = 10, currentDepth = 0, seen = 
   }
   
   if (typeof data === 'bigint') {
-    return data.toString();
+    return data.toString() + 'n';
   }
   
   if (typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean') {
@@ -984,11 +1003,19 @@ function sanitizeForSerialization(data, maxDepth = 10, currentDepth = 0, seen = 
             continue;
           }
           
-          // Handle different value types
-          if (typeof value === 'symbol') {
-            safe[key] = value.toString();
+          // Handle different value types safely
+          if (value === null || value === undefined) {
+            safe[key] = value;
+          } else if (typeof value === 'symbol') {
+            safe[key] = `[Symbol: ${value.description || 'unnamed'}]`;
           } else if (typeof value === 'function') {
             safe[key] = '[Function]';
+          } else if (typeof value === 'bigint') {
+            safe[key] = value.toString() + 'n';
+          } else if (value instanceof Date) {
+            safe[key] = value.toISOString();
+          } else if (value instanceof RegExp) {
+            safe[key] = value.toString();
           } else if (typeof value === 'object' && value !== null) {
             // Recursively sanitize objects with depth control
             safe[key] = sanitizeForSerialization(value, maxDepth, currentDepth + 1, seen);
