@@ -11,6 +11,7 @@ import { designSystemTrackerTools, handleDesignSystemTrackerTool } from "./tools
 import { figmaProjectOverviewTools, handleProjectOverviewTool } from "./tools/figma-project-overview-tools.js";
 import { deepAnalysisTools, handleDeepAnalysisTool } from "./tools/deep-analysis-tools.js";
 import { getLatestDevData } from "./plugin-integration.js";
+import { paginateNodes, wouldExceedTokenLimit, type PaginationMode } from "./utils/pagination.js";
 
 const serverInfo = {
   name: "Figma MCP Server",
@@ -62,7 +63,7 @@ function registerTools(
   // Tool to get file information
   server.tool(
     "get_figma_data",
-    "When the nodeId cannot be obtained, obtain the layout information about the entire Figma file",
+    "When the nodeId cannot be obtained, obtain the layout information about the entire Figma file. Supports pagination for large files.",
     {
       fileKey: z
         .string()
@@ -81,8 +82,28 @@ function registerTools(
         .describe(
           "OPTIONAL. Do NOT use unless explicitly requested by the user. Controls how many levels deep to traverse the node tree,",
         ),
+      page: z
+        .number()
+        .optional()
+        .default(1)
+        .describe(
+          "Page number for paginated results. Use this to navigate through large files.",
+        ),
+      pageSize: z
+        .number()
+        .optional()
+        .describe(
+          "Number of nodes per page. If not specified, automatically calculated based on content size.",
+        ),
+      paginationMode: z
+        .enum(["by-pages", "by-nodes", "auto"])
+        .optional()
+        .default("auto")
+        .describe(
+          "How to paginate: 'by-pages' splits by Figma pages, 'by-nodes' splits by node count, 'auto' chooses best method.",
+        ),
     },
-    async ({ fileKey, nodeId, depth }) => {
+    async ({ fileKey, nodeId, depth, page, pageSize, paginationMode }) => {
       try {
         Logger.log(
           `Fetching ${
@@ -100,17 +121,48 @@ function registerTools(
         Logger.log(`Successfully fetched file: ${file.name}`);
         const { nodes, globalVars, ...metadata } = file;
 
-        const result = {
+        // Check if pagination is needed
+        const unpaginatedResult = {
           metadata,
           nodes,
           globalVars,
         };
 
-        Logger.log(`Generating ${outputFormat.toUpperCase()} result from file`);
-        const formattedResult =
-          outputFormat === "json" ? JSON.stringify(result, null, 2) : yaml.dump(result);
+        const needsPagination = wouldExceedTokenLimit(unpaginatedResult, outputFormat);
+        
+        if (!needsPagination && page === 1) {
+          // Return full result if it fits
+          Logger.log(`Generating ${outputFormat.toUpperCase()} result from file (no pagination needed)`);
+          const formattedResult =
+            outputFormat === "json" ? JSON.stringify(unpaginatedResult, null, 2) : yaml.dump(unpaginatedResult);
 
-        Logger.log("Sending result to client");
+          Logger.log("Sending result to client");
+          return {
+            content: [{ type: "text", text: formattedResult }],
+          };
+        }
+
+        // Apply pagination
+        Logger.log(`Applying pagination: page ${page}, mode: ${paginationMode}`);
+        const paginatedResult = paginateNodes(nodes, metadata, globalVars, {
+          page,
+          pageSize,
+          mode: paginationMode as PaginationMode,
+          format: outputFormat,
+        });
+
+        // Include navigation hint in the response
+        const resultWithHint = {
+          ...paginatedResult,
+          _navigation: paginatedResult.navigationHint,
+        };
+        delete resultWithHint.navigationHint;
+
+        Logger.log(`Generating paginated ${outputFormat.toUpperCase()} result from file`);
+        const formattedResult =
+          outputFormat === "json" ? JSON.stringify(resultWithHint, null, 2) : yaml.dump(resultWithHint);
+
+        Logger.log("Sending paginated result to client");
         return {
           content: [{ type: "text", text: formattedResult }],
         };

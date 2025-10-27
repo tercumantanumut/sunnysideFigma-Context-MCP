@@ -101,6 +101,31 @@ This is actively developed software. Things can break. We're pushing updates fre
 
 Pick what works for your workflow.
 
+## AI Agent Configuration
+
+### Claude Code (Codex)
+
+Add this to your `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.figma-mcp]
+command = "node"
+args = [
+  "/path/to/sunnysideFigma-Context-MCP/dist/cli.js",
+  "--stdio"
+]
+env = { FIGMA_API_KEY = "your_figma_api_key_here", NODE_ENV = "cli" }
+```
+
+Replace `/path/to/sunnysideFigma-Context-MCP` with your actual installation path.
+
+### Other MCP Clients
+
+Use the same configuration format adapted for your client. The key settings are:
+- **Command**: `node`
+- **Args**: `["path/to/dist/cli.js", "--stdio"]`
+- **Environment**: `FIGMA_API_KEY` and `NODE_ENV="cli"`
+
 ## Documentation
 
 Everything you need is in the [docs folder](docs/). Start with [installation](docs/installation.md) if you want the full setup guide, or [examples](docs/examples/) to see what's possible.
