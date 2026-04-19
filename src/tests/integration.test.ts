@@ -37,9 +37,7 @@ describe("Figma MCP Server Tests", () => {
         version: "1.0.0",
       },
       {
-        capabilities: {
-          tools: {},
-        },
+        capabilities: {},
       },
     );
 
@@ -54,7 +52,7 @@ describe("Figma MCP Server Tests", () => {
 
   describe("Get Figma Data", () => {
     it("should be able to get Figma file data", async () => {
-      const args: any = {
+      const args: Record<string, unknown> = {
         fileKey: figmaFileKey,
       };
 
@@ -69,8 +67,11 @@ describe("Figma MCP Server Tests", () => {
         CallToolResultSchema,
       );
 
-      const content = result.content[0].text as string;
-      const parsed = yaml.load(content);
+      const first = result.content[0];
+      if (!first || first.type !== "text") {
+        throw new Error(`Expected first content block to be text, got ${first?.type ?? "nothing"}`);
+      }
+      const parsed = yaml.load(first.text);
 
       expect(parsed).toBeDefined();
     }, 60000);

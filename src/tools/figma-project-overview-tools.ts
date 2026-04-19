@@ -1,9 +1,11 @@
 import { z } from "zod";
-import { ToolSchema } from "@modelcontextprotocol/sdk/types.js";
+import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { FigmaService } from "../services/figma.js";
 import { getLatestDevData, getLatestProjectOverview } from "../plugin-integration.js";
 import { Logger } from "../utils/logger.js";
-import type { SimplifiedDesign } from "../services/simplify-node-response.js";
+import type { SimplifiedFill } from "../services/simplify-node-response.js";
+import type { SimplifiedComponentDefinition } from "../utils/sanitization.js";
+import type { ColorToken, FrameSummary } from "./shared/figma-types.js";
 
 // Data structures for project overview
 export interface ComponentInfo {
@@ -18,7 +20,6 @@ export interface ComponentSetInfo {
   id: string;
   name: string;
   description?: string;
-  properties: Record<string, any>;
   variants: number;
 }
 
@@ -27,15 +28,17 @@ export interface PageOverview {
   name: string;
   thumbnailUrl?: string;
   frameCount: number;
-  frames: Array<{
-    id: string;
-    name: string;
-    type: string;
-    childrenCount: number;
-    hasPrototype: boolean;
-    width?: number;
-    height?: number;
-  }>;
+  frames: FrameSummary[];
+}
+
+interface ComponentAnalysisRow {
+  id: string;
+  name: string;
+  description?: string;
+  type: "COMPONENT" | "COMPONENT_SET";
+  instances: number;
+  hasVariants: boolean;
+  variantCount?: number;
 }
 
 export interface PrototypeFlow {
@@ -75,10 +78,10 @@ export interface FigmaProjectOverview {
   
   // Design system
   designSystem: {
-    colors: Array<{name: string; value: string; id?: string}>;
-    textStyles: Array<{name: string; id: string; properties: any}>;
+    colors: ColorToken[];
+    textStyles: Array<{name: string; id: string; properties: Record<string, unknown>}>;
     effects: Array<{name: string; id: string; type: string}>;
-    variables: Record<string, any>;
+    variables: Record<string, unknown>;
   };
   
   // Prototypes
@@ -100,48 +103,94 @@ export interface FigmaProjectOverview {
   };
 }
 
+// Zod schemas used for argument inference inside handler functions.
+const projectOverviewArgsSchema = z.object({
+  fileKey: z.string().describe("The Figma file key to analyze"),
+  includePages: z.boolean().optional().default(true).describe("Include detailed page structure"),
+  includeThumbnails: z.boolean().optional().default(false).describe("Include thumbnail URLs (requires additional API calls)"),
+  includePrototypes: z.boolean().optional().default(true).describe("Include prototype flow analysis"),
+  includeStats: z.boolean().optional().default(true).describe("Include usage statistics"),
+  depth: z.number().optional().default(2).describe("How deep to traverse the node tree (1-3)"),
+  outputFormat: z.enum(["structured", "summary", "visual"]).optional().default("structured").describe("Output format style"),
+});
+
+const pageStructureArgsSchema = z.object({
+  fileKey: z.string().describe("The Figma file key"),
+  pageNames: z.array(z.string()).optional().describe("Specific page names to analyze (empty = all pages)"),
+  includeFrameDetails: z.boolean().optional().default(true).describe("Include detailed frame information"),
+  maxDepth: z.number().optional().default(3).describe("Maximum depth to traverse"),
+});
+
+const analyzeComponentsArgsSchema = z.object({
+  fileKey: z.string().describe("The Figma file key"),
+  sortBy: z.enum(["usage", "name", "modified"]).optional().default("usage").describe("How to sort components"),
+  includeVariants: z.boolean().optional().default(true).describe("Include component variants analysis"),
+  limit: z.number().optional().default(50).describe("Maximum number of components to return"),
+});
+
+const pluginProjectOverviewArgsSchema = z.object({
+  outputFormat: z.enum(["structured", "summary", "visual"]).optional().default("visual").describe("Output format style"),
+});
+
 // Tool schemas
-export const figmaProjectOverviewTools: ToolSchema[] = [
+export const figmaProjectOverviewTools: Tool[] = [
   {
     name: "get_figma_project_overview",
-    description: "Get comprehensive overview of entire Figma file including structure, components, design system, and statistics. Perfect for understanding the complete project context.",
-    inputSchema: z.object({
-      fileKey: z.string().describe("The Figma file key to analyze"),
-      includePages: z.boolean().optional().default(true).describe("Include detailed page structure"),
-      includeThumbnails: z.boolean().optional().default(false).describe("Include thumbnail URLs (requires additional API calls)"),
-      includePrototypes: z.boolean().optional().default(true).describe("Include prototype flow analysis"),
-      includeStats: z.boolean().optional().default(true).describe("Include usage statistics"),
-      depth: z.number().optional().default(2).describe("How deep to traverse the node tree (1-3)"),
-      outputFormat: z.enum(["structured", "summary", "visual"]).optional().default("structured").describe("Output format style")
-    })
+    description:
+      "Get comprehensive overview of entire Figma file including structure, components, design system, and statistics. Perfect for understanding the complete project context.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        fileKey: { type: "string", description: "The Figma file key to analyze" },
+        includePages: { type: "boolean", default: true, description: "Include detailed page structure" },
+        includeThumbnails: { type: "boolean", default: false, description: "Include thumbnail URLs (requires additional API calls)" },
+        includePrototypes: { type: "boolean", default: true, description: "Include prototype flow analysis" },
+        includeStats: { type: "boolean", default: true, description: "Include usage statistics" },
+        depth: { type: "number", default: 2, description: "How deep to traverse the node tree (1-3)" },
+        outputFormat: { type: "string", enum: ["structured", "summary", "visual"], default: "structured", description: "Output format style" },
+      },
+      required: ["fileKey"],
+    },
   },
   {
-    name: "get_figma_page_structure", 
+    name: "get_figma_page_structure",
     description: "Get detailed structure of specific pages in a Figma file with frame hierarchy",
-    inputSchema: z.object({
-      fileKey: z.string().describe("The Figma file key"),
-      pageNames: z.array(z.string()).optional().describe("Specific page names to analyze (empty = all pages)"),
-      includeFrameDetails: z.boolean().optional().default(true).describe("Include detailed frame information"),
-      maxDepth: z.number().optional().default(3).describe("Maximum depth to traverse")
-    })
+    inputSchema: {
+      type: "object",
+      properties: {
+        fileKey: { type: "string", description: "The Figma file key" },
+        pageNames: { type: "array", items: { type: "string" }, description: "Specific page names to analyze (empty = all pages)" },
+        includeFrameDetails: { type: "boolean", default: true, description: "Include detailed frame information" },
+        maxDepth: { type: "number", default: 3, description: "Maximum depth to traverse" },
+      },
+      required: ["fileKey"],
+    },
   },
   {
     name: "analyze_figma_components",
     description: "Analyze component library usage and organization in a Figma file",
-    inputSchema: z.object({
-      fileKey: z.string().describe("The Figma file key"),
-      sortBy: z.enum(["usage", "name", "modified"]).optional().default("usage").describe("How to sort components"),
-      includeVariants: z.boolean().optional().default(true).describe("Include component variants analysis"),
-      limit: z.number().optional().default(50).describe("Maximum number of components to return")
-    })
+    inputSchema: {
+      type: "object",
+      properties: {
+        fileKey: { type: "string", description: "The Figma file key" },
+        sortBy: { type: "string", enum: ["usage", "name", "modified"], default: "usage", description: "How to sort components" },
+        includeVariants: { type: "boolean", default: true, description: "Include component variants analysis"  },
+        limit: { type: "number", default: 50, description: "Maximum number of components to return" },
+      },
+      required: ["fileKey"],
+    },
   },
   {
     name: "get_plugin_project_overview",
-    description: "Get the project overview data directly from the Figma plugin scan. This provides the exact statistics shown in the plugin UI including all pages, frames, and instances.",
-    inputSchema: z.object({
-      outputFormat: z.enum(["structured", "summary", "visual"]).optional().default("visual").describe("Output format style")
-    })
-  }
+    description:
+      "Get the project overview data directly from the Figma plugin scan. This provides the exact statistics shown in the plugin UI including all pages, frames, and instances.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        outputFormat: { type: "string", enum: ["structured", "summary", "visual"], default: "visual", description: "Output format style" },
+      },
+    },
+  },
 ];
 
 // Handler functions
@@ -165,7 +214,7 @@ export async function handleProjectOverviewTool(
 }
 
 async function getProjectOverview(
-  args: z.infer<typeof figmaProjectOverviewTools[0]["inputSchema"]>,
+  args: z.infer<typeof projectOverviewArgsSchema>,
   figmaService: FigmaService
 ): Promise<any> {
   try {
@@ -261,24 +310,22 @@ async function getProjectOverview(
     if (fileData.globalVars?.styles) {
       const styles = fileData.globalVars.styles;
       for (const [id, style] of Object.entries(styles)) {
-        if (typeof style === 'object' && style !== null && Array.isArray(style)) {
+        if (Array.isArray(style)) {
           // This is a fill style (color)
-          const fill = style[0];
-          if (fill && fill.color) {
-            const { r, g, b, a } = fill.color;
-            const hex = `#${Math.round(r * 255).toString(16).padStart(2, '0')}${Math.round(g * 255).toString(16).padStart(2, '0')}${Math.round(b * 255).toString(16).padStart(2, '0')}`;
+          const value = fillToHex(style[0]);
+          if (value) {
             overview.designSystem.colors.push({
+              id,
               name: `Color ${id}`,
-              value: hex,
-              id
+              value,
             });
           }
-        } else if (typeof style === 'object' && style !== null && 'fontFamily' in style) {
+        } else if (typeof style === "object" && style !== null && "fontFamily" in style) {
           // This is a text style
           overview.designSystem.textStyles.push({
             name: `Text Style ${id}`,
             id,
-            properties: style
+            properties: style as Record<string, unknown>,
           });
         }
       }
@@ -316,7 +363,7 @@ async function getProjectOverview(
 }
 
 async function getPageStructure(
-  args: z.infer<typeof figmaProjectOverviewTools[1]["inputSchema"]>,
+  args: z.infer<typeof pageStructureArgsSchema>,
   figmaService: FigmaService
 ): Promise<any> {
   try {
@@ -362,7 +409,7 @@ async function getPageStructure(
 }
 
 async function analyzeComponents(
-  args: z.infer<typeof figmaProjectOverviewTools[2]["inputSchema"]>,
+  args: z.infer<typeof analyzeComponentsArgsSchema>,
   figmaService: FigmaService
 ): Promise<any> {
   try {
@@ -373,32 +420,35 @@ async function analyzeComponents(
     const fileData = await figmaService.getFile(fileKey, 1);
     
     // Analyze component usage
-    const componentAnalysis: any[] = [];
+    const componentAnalysis: ComponentAnalysisRow[] = [];
     const components = fileData.components || {};
     const componentSets = fileData.componentSets || {};
-    
+
     // Count component instances
     const instanceCounts: Record<string, number> = {};
     if (fileData.nodes) {
       countComponentInstances(fileData.nodes, instanceCounts);
     }
-    
+
     // Process regular components
     for (const [id, component] of Object.entries(components)) {
       componentAnalysis.push({
         id,
         name: component.name,
-        description: component.description,
         type: "COMPONENT",
         instances: instanceCounts[id] || 0,
-        hasVariants: false
+        hasVariants: false,
       });
     }
-    
+
     // Process component sets if requested
     if (includeVariants) {
       for (const [id, componentSet] of Object.entries(componentSets)) {
-        const variantCount = Object.keys(componentSet.children || {}).length;
+        // Variants are no longer attached to the component set; derive the
+        // count from the components that reference this set via componentSetId.
+        const variantCount = Object.values(components).filter(
+          (c: SimplifiedComponentDefinition) => c.componentSetId === id,
+        ).length;
         componentAnalysis.push({
           id,
           name: componentSet.name,
@@ -407,7 +457,6 @@ async function analyzeComponents(
           instances: instanceCounts[id] || 0,
           hasVariants: true,
           variantCount,
-          properties: componentSet.componentPropertyDefinitions
         });
       }
     }
@@ -460,16 +509,16 @@ function processPages(nodes: any[], includeThumbnails: boolean): PageOverview[] 
   
   for (const node of nodes) {
     if (node.type === "CANVAS") {
-      const frames = (node.children || [])
+      const frames: FrameSummary[] = (node.children || [])
         .filter((child: any) => child.type === "FRAME" || child.type === "COMPONENT" || child.type === "INSTANCE")
-        .map((frame: any) => ({
+        .map((frame: any): FrameSummary => ({
           id: frame.id,
           name: frame.name,
           type: frame.type,
-          childrenCount: frame.children?.length || 0,
+          childCount: frame.children?.length || 0,
           hasPrototype: !!frame.transitionNodeID,
           width: frame.boundingBox?.width,
-          height: frame.boundingBox?.height
+          height: frame.boundingBox?.height,
         }));
       
       pages.push({
@@ -658,7 +707,7 @@ function formatVisualOverview(overview: FigmaProjectOverview): string {
 }
 
 async function getPluginProjectOverview(
-  args: z.infer<typeof figmaProjectOverviewTools[3]["inputSchema"]>
+  args: z.infer<typeof pluginProjectOverviewArgsSchema>
 ): Promise<any> {
   try {
     const { outputFormat } = args;
@@ -720,4 +769,19 @@ async function getPluginProjectOverview(
       content: [{ type: "text", text: `Error: ${message}` }]
     };
   }
+}
+
+/**
+ * Reduce a SimplifiedFill (object variant or template-literal color string) to
+ * a CSS color string. Returns null when no usable color is available.
+ */
+function fillToHex(fill: SimplifiedFill | undefined): string | null {
+  if (!fill) return null;
+  if (typeof fill === "string") {
+    // Already a CSS color literal (e.g. `#aabbcc` or `rgba(...)`).
+    return fill;
+  }
+  if (fill.hex) return fill.hex;
+  if (fill.rgba) return fill.rgba;
+  return null;
 }

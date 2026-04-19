@@ -1,51 +1,101 @@
 import { z } from "zod";
-import { ToolSchema } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { FigmaService } from "../services/figma.js";
 import { Logger } from "../utils/logger.js";
+import type { SimplifiedDesign, SimplifiedNode } from "../services/simplify-node-response.js";
+import type {
+  FrameSummary,
+  PageSummary,
+  ScreenTypeGroup,
+  AppFlow,
+  NavigationPattern,
+  AppStructureAnalysis,
+  ColorToken,
+  TypographyToken,
+} from "./shared/figma-types.js";
 
-// Tool for batch analysis of multiple frames/nodes
-export const deepAnalysisTools: ToolSchema[] = [
+// Argument schemas (Zod) — kept separately so we can both describe the tool
+// surface as JSON Schema for the MCP `Tool` type AND derive the TypeScript
+// argument types via `z.infer` at the handler call sites.
+const analyzeAppStructureArgsSchema = z.object({
+  fileKey: z.string().describe("The Figma file key to analyze"),
+  includeAllFrames: z.boolean().optional().default(true).describe("Include detailed analysis of all frames"),
+  extractAssets: z.boolean().optional().default(false).describe("Extract asset information for each frame"),
+  maxDepth: z.number().optional().default(4).describe("Maximum depth to traverse for each node"),
+  outputFormat: z.enum(["detailed", "summary", "json"]).optional().default("detailed").describe("Output format"),
+});
+
+const batchExtractFramesArgsSchema = z.object({
+  fileKey: z.string().describe("The Figma file key"),
+  frameIds: z.array(z.string()).describe("Array of frame node IDs to extract"),
+  includeCSS: z.boolean().optional().default(true).describe("Include CSS for each frame"),
+  includeLayout: z.boolean().optional().default(true).describe("Include layout information"),
+  includeChildren: z.boolean().optional().default(true).describe("Include child element details"),
+});
+
+const mapAppFlowArgsSchema = z.object({
+  fileKey: z.string().describe("The Figma file key"),
+  identifyScreenTypes: z.boolean().optional().default(true).describe("Identify different screen types (settings, onboarding, etc.)"),
+  mapUserJourney: z.boolean().optional().default(true).describe("Map potential user journey paths"),
+});
+
+// Tool descriptors with JSON-Schema `inputSchema`, conforming to `Tool`
+// from @modelcontextprotocol/sdk. Registration in `mcp.ts` uses inline Zod
+// schemas directly, so this array is informational.
+export const deepAnalysisTools: Tool[] = [
   {
     name: "analyze_app_structure",
     description: "Perform comprehensive analysis of entire app structure, extracting detailed information from all pages and key frames without manual selection",
-    inputSchema: z.object({
-      fileKey: z.string().describe("The Figma file key to analyze"),
-      includeAllFrames: z.boolean().optional().default(true).describe("Include detailed analysis of all frames"),
-      extractAssets: z.boolean().optional().default(false).describe("Extract asset information for each frame"),
-      maxDepth: z.number().optional().default(4).describe("Maximum depth to traverse for each node"),
-      outputFormat: z.enum(["detailed", "summary", "json"]).optional().default("detailed").describe("Output format")
-    })
+    inputSchema: {
+      type: "object",
+      properties: {
+        fileKey: { type: "string", description: "The Figma file key to analyze" },
+        includeAllFrames: { type: "boolean", default: true, description: "Include detailed analysis of all frames" },
+        extractAssets: { type: "boolean", default: false, description: "Extract asset information for each frame" },
+        maxDepth: { type: "number", default: 4, description: "Maximum depth to traverse for each node" },
+        outputFormat: { type: "string", enum: ["detailed", "summary", "json"], default: "detailed", description: "Output format" },
+      },
+      required: ["fileKey"],
+    },
   },
   {
     name: "batch_extract_frames",
     description: "Extract detailed CSS, layout, and component information from multiple frames at once",
-    inputSchema: z.object({
-      fileKey: z.string().describe("The Figma file key"),
-      frameIds: z.array(z.string()).describe("Array of frame node IDs to extract"),
-      includeCSS: z.boolean().optional().default(true).describe("Include CSS for each frame"),
-      includeLayout: z.boolean().optional().default(true).describe("Include layout information"),
-      includeChildren: z.boolean().optional().default(true).describe("Include child element details")
-    })
+    inputSchema: {
+      type: "object",
+      properties: {
+        fileKey: { type: "string", description: "The Figma file key" },
+        frameIds: { type: "array", items: { type: "string" }, description: "Array of frame node IDs to extract" },
+        includeCSS: { type: "boolean", default: true, description: "Include CSS for each frame" },
+        includeLayout: { type: "boolean", default: true, description: "Include layout information" },
+        includeChildren: { type: "boolean", default: true, description: "Include child element details" },
+      },
+      required: ["fileKey", "frameIds"],
+    },
   },
   {
     name: "map_app_flow",
     description: "Analyze app navigation flow and screen relationships based on naming patterns and structure",
-    inputSchema: z.object({
-      fileKey: z.string().describe("The Figma file key"),
-      identifyScreenTypes: z.boolean().optional().default(true).describe("Identify different screen types (settings, onboarding, etc.)"),
-      mapUserJourney: z.boolean().optional().default(true).describe("Map potential user journey paths")
-    })
-  }
+    inputSchema: {
+      type: "object",
+      properties: {
+        fileKey: { type: "string", description: "The Figma file key" },
+        identifyScreenTypes: { type: "boolean", default: true, description: "Identify different screen types (settings, onboarding, etc.)" },
+        mapUserJourney: { type: "boolean", default: true, description: "Map potential user journey paths" },
+      },
+      required: ["fileKey"],
+    },
+  },
 ];
 
 export async function handleDeepAnalysisTool(
   toolName: string,
-  args: any,
+  args: unknown,
   figmaService: FigmaService
-): Promise<any> {
+): Promise<CallToolResult> {
   switch (toolName) {
     case "analyze_app_structure":
-      return await analyzeAppStructure(args, figmaService);
+      return await analyzeAppStructure(analyzeAppStructureArgsSchema.parse(args), figmaService);
     case "batch_extract_frames":
       return await batchExtractFrames(args, figmaService);
     case "map_app_flow":
@@ -56,18 +106,18 @@ export async function handleDeepAnalysisTool(
 }
 
 async function analyzeAppStructure(
-  args: z.infer<typeof deepAnalysisTools[0]["inputSchema"]>,
+  args: z.infer<typeof analyzeAppStructureArgsSchema>,
   figmaService: FigmaService
-): Promise<any> {
+): Promise<CallToolResult> {
   try {
     const { fileKey, includeAllFrames, extractAssets, maxDepth, outputFormat } = args;
-    
+
     Logger.important(`Starting comprehensive app structure analysis for ${fileKey}`);
-    
+
     // Get complete file structure
-    const fileData = await figmaService.getFile(fileKey, maxDepth);
-    
-    const analysis = {
+    const fileData: SimplifiedDesign = await figmaService.getFile(fileKey, maxDepth);
+
+    const analysis: AppStructureAnalysis = {
       metadata: {
         fileName: fileData.name,
         fileKey,
@@ -92,14 +142,14 @@ async function analyzeAppStructure(
         userJourneys: []
       }
     };
-    
+
     // Analyze each page
     if (fileData.nodes) {
       for (const page of fileData.nodes) {
         if (page.type === "CANVAS") {
           analysis.structure.totalPages++;
-          
-          const pageAnalysis = {
+
+          const pageAnalysis: PageSummary = {
             id: page.id,
             name: page.name,
             type: page.type,
@@ -108,49 +158,47 @@ async function analyzeAppStructure(
             screenType: identifyScreenType(page.name),
             totalElements: countElements(page)
           };
-          
+
           // Analyze frames within the page
           if (page.children && includeAllFrames) {
             for (const child of page.children) {
               if (child.type === "FRAME" || child.type === "COMPONENT" || child.type === "INSTANCE") {
                 pageAnalysis.frameCount++;
                 analysis.structure.totalFrames++;
-                
-                const frameAnalysis = {
+
+                const frameAnalysis: FrameSummary = {
                   id: child.id,
                   name: child.name,
                   type: child.type,
-                  dimensions: {
-                    width: child.layout?.dimensions?.width || 0,
-                    height: child.layout?.dimensions?.height || 0
-                  },
+                  width: child.boundingBox?.width ?? 0,
+                  height: child.boundingBox?.height ?? 0,
                   screenType: identifyScreenType(child.name),
                   hasPrototype: false, // TODO: Extract prototype info
                   childCount: child.children ? child.children.length : 0
                 };
-                
+
                 pageAnalysis.frames.push(frameAnalysis);
               }
             }
           }
-          
-          analysis.structure.totalElements += pageAnalysis.totalElements;
+
+          analysis.structure.totalElements += pageAnalysis.totalElements ?? 0;
           analysis.structure.pages.push(pageAnalysis);
         }
       }
     }
-    
+
     // Analyze design system
-    if (fileData.styles) {
-      analysis.designSystem.colors = extractColorTokens(fileData.styles);
-      analysis.designSystem.typography = extractTypographyTokens(fileData.styles);
+    if (fileData.globalVars?.styles) {
+      analysis.designSystem.colors = extractColorTokens(fileData.globalVars.styles);
+      analysis.designSystem.typography = extractTypographyTokens(fileData.globalVars.styles);
     }
-    
+
     // Analyze app flow patterns
     analysis.appFlow = analyzeAppFlowPatterns(analysis.structure.pages);
-    
+
     Logger.log(`Analysis complete: ${analysis.structure.totalPages} pages, ${analysis.structure.totalFrames} frames`);
-    
+
     // Format output
     let formattedOutput: string;
     switch (outputFormat) {
@@ -165,11 +213,11 @@ async function analyzeAppStructure(
         formattedOutput = formatDetailedAnalysis(analysis);
         break;
     }
-    
+
     return {
       content: [{ type: "text", text: formattedOutput }]
     };
-    
+
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     Logger.error(`Error in app structure analysis:`, message);
@@ -197,7 +245,7 @@ function identifyScreenType(name: string): string {
   return 'unknown';
 }
 
-function countElements(node: any): number {
+function countElements(node: SimplifiedNode): number {
   let count = 1;
   if (node.children) {
     for (const child of node.children) {
@@ -207,40 +255,41 @@ function countElements(node: any): number {
   return count;
 }
 
-function extractColorTokens(styles: any): any[] {
+function extractColorTokens(_styles: SimplifiedDesign["globalVars"]["styles"]): ColorToken[] {
   // TODO: Implement color token extraction
   return [];
 }
 
-function extractTypographyTokens(styles: any): any[] {
+function extractTypographyTokens(_styles: SimplifiedDesign["globalVars"]["styles"]): TypographyToken[] {
   // TODO: Implement typography token extraction
   return [];
 }
 
-function analyzeAppFlowPatterns(pages: any[]): any {
-  const screenTypes = {};
-  const patterns = [];
-  
+function analyzeAppFlowPatterns(pages: PageSummary[]): AppFlow {
+  const screenTypes: ScreenTypeGroup = {};
+  const patterns: NavigationPattern[] = [];
+
   // Group screens by type
-  pages.forEach(page => {
-    page.frames.forEach(frame => {
-      const type = frame.screenType;
+  pages.forEach((page: PageSummary) => {
+    page.frames.forEach((frame: FrameSummary) => {
+      const type = frame.screenType ?? 'unknown';
       if (!screenTypes[type]) {
         screenTypes[type] = [];
       }
       screenTypes[type].push(frame);
     });
   });
-  
+
   // Identify navigation patterns
-  if (screenTypes.settings && screenTypes.settings.length > 1) {
+  const settings = screenTypes.settings ?? [];
+  if (settings.length > 1) {
     patterns.push({
       type: 'settings_flow',
       description: 'Multiple settings screens indicating complex settings navigation',
-      screens: screenTypes.settings.length
+      screens: settings.length
     });
   }
-  
+
   return {
     screenTypes,
     navigationPatterns: patterns,
@@ -248,13 +297,13 @@ function analyzeAppFlowPatterns(pages: any[]): any {
   };
 }
 
-function formatDetailedAnalysis(analysis: any): string {
+function formatDetailedAnalysis(analysis: AppStructureAnalysis): string {
   return `# 📱 Luminism App - Comprehensive Structure Analysis
 
 ## 📊 Overview
 - **File**: ${analysis.metadata.fileName}
 - **Pages**: ${analysis.structure.totalPages}
-- **Frames**: ${analysis.structure.totalFrames}  
+- **Frames**: ${analysis.structure.totalFrames}
 - **Total Elements**: ${analysis.structure.totalElements}
 - **Analysis Date**: ${analysis.metadata.analysisTimestamp}
 
@@ -263,7 +312,7 @@ ${analysis.structure.pages.map(page => `
 ### ${page.name} (${page.frameCount} frames)
 - **Type**: ${page.screenType}
 - **Elements**: ${page.totalElements}
-- **Frames**: ${page.frames.map(f => `\n  - ${f.name} (${f.dimensions.width}×${f.dimensions.height}) - ${f.screenType}`).join('')}
+- **Frames**: ${page.frames.map(f => `\n  - ${f.name} (${f.width}×${f.height}) - ${f.screenType}`).join('')}
 `).join('\n')}
 
 ## 🎨 Design System
@@ -272,30 +321,30 @@ ${analysis.structure.pages.map(page => `
 - **Components**: ${analysis.designSystem.components.length} reusable components
 
 ## 🔄 App Flow Analysis
-${Object.entries(analysis.appFlow.screenTypes).map(([type, screens]) => 
+${Object.entries(analysis.appFlow.screenTypes).map(([type, screens]) =>
   `- **${type}**: ${screens.length} screens`
 ).join('\n')}
 
 ## 🚀 Navigation Patterns
-${analysis.appFlow.navigationPatterns.map(pattern => 
+${analysis.appFlow.navigationPatterns.map(pattern =>
   `- **${pattern.type}**: ${pattern.description} (${pattern.screens} screens)`
 ).join('\n')}
 `;
 }
 
-function formatAnalysisSummary(analysis: any): string {
+function formatAnalysisSummary(analysis: AppStructureAnalysis): string {
   return `📱 ${analysis.metadata.fileName} - ${analysis.structure.totalPages} pages, ${analysis.structure.totalFrames} frames, ${analysis.structure.totalElements} elements`;
 }
 
 // Placeholder for batch extraction (to be implemented)
-async function batchExtractFrames(args: any, figmaService: FigmaService): Promise<any> {
+async function batchExtractFrames(_args: unknown, _figmaService: FigmaService): Promise<CallToolResult> {
   return {
     content: [{ type: "text", text: "Batch frame extraction - Coming soon!" }]
   };
 }
 
 // Placeholder for app flow mapping (to be implemented)
-async function mapAppFlow(args: any, figmaService: FigmaService): Promise<any> {
+async function mapAppFlow(_args: unknown, _figmaService: FigmaService): Promise<CallToolResult> {
   return {
     content: [{ type: "text", text: "App flow mapping - Coming soon!" }]
   };

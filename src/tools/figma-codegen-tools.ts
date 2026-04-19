@@ -164,7 +164,13 @@ async function getReactComponent(args: { componentName?: string; styleType?: str
     // If no plugin data, try to use Figma API data
     if (!devData && args.fileKey && args.nodeId) {
       const { FigmaService } = await import('../services/figma.js');
-      const figmaService = new FigmaService();
+      const figmaApiKey = process.env.FIGMA_API_KEY ?? "";
+      const figmaOAuthToken = process.env.FIGMA_OAUTH_TOKEN ?? "";
+      const figmaService = new FigmaService({
+        figmaApiKey,
+        figmaOAuthToken,
+        useOAuth: !figmaApiKey && !!figmaOAuthToken,
+      });
       const nodeData = await figmaService.getNode(args.fileKey, args.nodeId, 3);
 
       if (nodeData && nodeData.nodes && nodeData.nodes.length > 0) {

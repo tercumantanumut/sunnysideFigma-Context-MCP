@@ -186,18 +186,19 @@ function registerTools(
       try {
         const actualFileKey = fileKey;
 
-        const imageFills = nodes.filter(({ imageRef }) => !!imageRef) as {
-          nodeId: string;
-          imageRef: string;
-          fileName: string;
-        }[];
+        type DownloadRequest = { nodeId: string; imageRef?: string; fileName: string };
+        const typedNodes = nodes as DownloadRequest[];
+
+        const imageFills = typedNodes.filter(
+          (n: DownloadRequest): n is DownloadRequest & { imageRef: string } => !!n.imageRef,
+        );
         const fillDownloads = figmaService.getImageFills(actualFileKey, imageFills, localPath);
-        const renderRequests = nodes
-          .filter(({ imageRef }) => !imageRef)
-          .map(({ nodeId, fileName }) => ({
-            nodeId,
-            fileName,
-            fileType: fileName.endsWith(".svg") ? ("svg" as const) : ("png" as const),
+        const renderRequests = typedNodes
+          .filter((n: DownloadRequest) => !n.imageRef)
+          .map((n: DownloadRequest) => ({
+            nodeId: n.nodeId,
+            fileName: n.fileName,
+            fileType: n.fileName.endsWith(".svg") ? ("svg" as const) : ("png" as const),
           }));
 
         const renderDownloads = figmaService.getImages(

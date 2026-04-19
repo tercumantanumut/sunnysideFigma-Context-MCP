@@ -1,4 +1,4 @@
-import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { figmaDevBridge } from "../figma-dev-bridge.js";
 import { Logger } from "../utils/logger.js";
 
