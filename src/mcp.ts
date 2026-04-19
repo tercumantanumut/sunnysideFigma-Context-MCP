@@ -129,9 +129,9 @@ function registerTools(
   // Tool to download images
   server.tool(
     "download_figma_images",
-    "Download SVG and PNG images from Figma. Use get_figma_dev_code first to get the file key from plugin data.",
+    "Download SVG and PNG images from Figma. Use get_JSON first to get the file key from plugin data.",
     {
-      fileKey: z.string().describe("The key of the Figma file containing the node. Get this from the plugin data using get_figma_dev_code tool."),
+      fileKey: z.string().describe("The key of the Figma file containing the node. Get this from the plugin data using get_JSON tool."),
       nodes: z
         .object({
           nodeId: z
@@ -237,31 +237,6 @@ function registerTools(
 }
 
 function registerPluginTools(server: McpServer): void {
-  // Register get_figma_dev_code tool
-  server.tool(
-    "get_figma_dev_code",
-    "Get the latest CSS and React code extracted from Figma via the plugin. This provides actual dev-mode code generation.",
-    {
-      format: z
-        .enum(["css", "react", "both", "json"])
-        .optional()
-        .default("both")
-        .describe("Format of code to return")
-    },
-    async (args) => {
-      try {
-        return await handlePluginTool("get_figma_dev_code", args);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : JSON.stringify(error);
-        Logger.error("Error in get_figma_dev_code:", message);
-        return {
-          isError: true,
-          content: [{ type: "text", text: `Error: ${message}` }],
-        };
-      }
-    }
-  );
-
   // Register get_figma_dev_history tool
   server.tool(
     "get_figma_dev_history",
@@ -281,40 +256,6 @@ function registerPluginTools(server: McpServer): void {
       } catch (error) {
         const message = error instanceof Error ? error.message : JSON.stringify(error);
         Logger.error("Error in get_figma_dev_history:", message);
-        return {
-          isError: true,
-          content: [{ type: "text", text: `Error: ${message}` }],
-        };
-      }
-    }
-  );
-
-  // Register generate_component_from_figma tool
-  server.tool(
-    "generate_component_from_figma",
-    "Generate a complete React component with styling from the latest Figma dev data",
-    {
-      componentName: z
-        .string()
-        .optional()
-        .describe("Name for the generated component (optional, will use Figma node name if not provided)"),
-      styleType: z
-        .enum(["css-modules", "styled-components", "tailwind", "inline"])
-        .optional()
-        .default("css-modules")
-        .describe("Type of styling to generate"),
-      includeChildren: z
-        .boolean()
-        .optional()
-        .default(true)
-        .describe("Whether to include child components")
-    },
-    async (args) => {
-      try {
-        return await handlePluginTool("generate_component_from_figma", args);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : JSON.stringify(error);
-        Logger.error("Error in generate_component_from_figma:", message);
         return {
           isError: true,
           content: [{ type: "text", text: `Error: ${message}` }],
@@ -373,36 +314,6 @@ function registerPluginTools(server: McpServer): void {
     }
   );
 
-  // Register get_React tool
-  server.tool(
-    "get_React",
-    "Get the complete React component structure from the latest Figma extraction with full component hierarchy",
-    {
-      includeCSS: z
-        .boolean()
-        .optional()
-        .default(true)
-        .describe("Whether to include the comprehensive CSS in the component"),
-      componentFormat: z
-        .enum(["functional", "class", "arrow"])
-        .optional()
-        .default("functional")
-        .describe("React component format to use")
-    },
-    async (args) => {
-      try {
-        return await handlePluginTool("get_React", args);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : JSON.stringify(error);
-        Logger.error("Error in get_React:", message);
-        return {
-          isError: true,
-          content: [{ type: "text", text: `Error: ${message}` }],
-        };
-      }
-    }
-  );
-
   // Register get_JSON tool
   server.tool(
     "get_JSON",
@@ -425,31 +336,6 @@ function registerPluginTools(server: McpServer): void {
       } catch (error) {
         const message = error instanceof Error ? error.message : JSON.stringify(error);
         Logger.error("Error in get_JSON:", message);
-        return {
-          isError: true,
-          content: [{ type: "text", text: `Error: ${message}` }],
-        };
-      }
-    }
-  );
-
-  // Register get_UI_Screenshots tool
-  server.tool(
-    "get_UI_Screenshots",
-    "Get information about UI screenshots and visual assets from the Figma extraction",
-    {
-      includeImageData: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe("Whether to include base64 image data (if available)")
-    },
-    async (args) => {
-      try {
-        return await handlePluginTool("get_UI_Screenshots", args);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : JSON.stringify(error);
-        Logger.error("Error in get_UI_Screenshots:", message);
         return {
           isError: true,
           content: [{ type: "text", text: `Error: ${message}` }],
@@ -506,39 +392,6 @@ function registerFigmaDevTools(server: McpServer): void {
 }
 
 function registerFigmaCodegenTools(server: McpServer): void {
-  // Register clean CSS tool
-  server.tool(
-    "get_figma_css",
-    "Get clean CSS from Figma using native getCSSAsync() API or generate from Figma API data",
-    {
-      nodeId: z
-        .string()
-        .optional()
-        .describe("Optional Figma node ID. If not provided, uses current selection."),
-      fileKey: z
-        .string()
-        .optional()
-        .describe("Figma file key (required if no plugin data available)"),
-      format: z
-        .enum(["raw", "formatted", "with-selector"])
-        .optional()
-        .default("formatted")
-        .describe("CSS output format")
-    },
-    async (args) => {
-      try {
-        return await handleFigmaCodegenTool("get_figma_css", args);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : JSON.stringify(error);
-        Logger.error("Error in get_figma_css:", message);
-        return {
-          isError: true,
-          content: [{ type: "text", text: `Error: ${message}` }],
-        };
-      }
-    }
-  );
-
   // Register clean React component tool
   server.tool(
     "get_react_component",

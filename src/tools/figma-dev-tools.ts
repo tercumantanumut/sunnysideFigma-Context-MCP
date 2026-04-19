@@ -4,7 +4,7 @@ import { Logger } from "../utils/logger.js";
 
 export const figmaDevTools: Tool[] = [
   {
-    name: "get_figma_dev_code",
+    name: "get_figma_dev_mode_code",
     description: "Get React + Tailwind code from Figma's official Dev Mode MCP Server. Works with current selection in Figma Desktop or specific node ID.",
     inputSchema: {
       type: "object",
@@ -67,7 +67,7 @@ export const figmaDevTools: Tool[] = [
 
 export async function handleFigmaDevTool(name: string, args: any): Promise<any> {
   switch (name) {
-    case "get_figma_dev_code":
+    case "get_figma_dev_mode_code":
       return await getFigmaDevCode(args);
     
     case "get_figma_variable_definitions":
